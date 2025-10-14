@@ -1,5 +1,5 @@
 # Session Environment Template
-# Copy this to: sessions/active/{agent-id}/{session-slug}/.session-env
+# Copy this to: sessions/active/{session-slug}/.session-env
 # Then update the values and source it: source .session-env
 
 export GIT_AUTHOR_NAME="Agent-{{AGENT_ID}} (via {{USER_NAME}})"
