@@ -17,38 +17,32 @@ This document contains detailed examples, git commands, troubleshooting guides, 
 
 ---
 
-## Git Worktrees Setup
+## Git Worktrees Setup (Optional)
 
-Recommended approach for multi-agent isolation:
+Worktrees are **optional infrastructure** for running multiple sessions concurrently. They're not required for the protocol to work.
 
 ```bash
 # Main repo stays on main branch
 cd /path/to/repo
 
-# Create worktree for each agent
-git worktree add ../repo-cursor-1 main
-git worktree add ../repo-claude-a main
-git worktree add ../repo-agent-3 main
+# Create worktree for concurrent session work
+git worktree add ../repo-workspace-1 main
+git worktree add ../repo-workspace-2 main
 
-# Each agent works in their own worktree
-cd ../repo-cursor-1
-git config user.name "Cursor-Local-1 (via cristos)"
-git config user.email "cristos+cursor-1@agents.local"
-
-cd ../repo-claude-a
-git config user.name "Claude-Cloud-A (via cristos)"
-git config user.email "cristos+claude-a@agents.local"
+# No git config needed - session activation handles identity
 ```
 
 **Benefits:**
 - Shared `.git` directory (efficient disk usage)
 - Isolated working directories (no file conflicts)
-- Each agent can be on different branch
-- All agents see same git history
+- Can run multiple sessions concurrently
+- All see same git history
 
 **Limitations:**
 - Can't checkout same branch in multiple worktrees
-- Must use unique branch names per agent
+- Must use unique branch names per session
+
+**Alternative:** Work sequentially in main repo (one session at a time)
 
 ---
 
@@ -90,7 +84,7 @@ Each line: `{agent-id}:{session-slug}:{unix-timestamp}`
 
 ---
 
-## Session Claim Protocol
+## Session Claim and Activation
 
 ### Complete Implementation
 
@@ -132,13 +126,29 @@ if git push origin main; then
   # Step 6: Move session to active
   mkdir -p sessions/active/$AGENT_ID
   mv sessions/planned/$SESSION_SLUG sessions/active/$AGENT_ID/
+  
+  # Step 7: Create session activation file
+  cat > sessions/active/$AGENT_ID/$SESSION_SLUG/.session-env << EOF
+export GIT_AUTHOR_NAME="Agent-$AGENT_ID (via $(git config user.name))"
+export GIT_AUTHOR_EMAIL="$(git config user.email)+$AGENT_ID@agents.local"
+export GIT_COMMITTER_NAME="Agent-$AGENT_ID (via $(git config user.name))"
+export GIT_COMMITTER_EMAIL="$(git config user.email)+$AGENT_ID@agents.local"
+export SESSION_AGENT="$AGENT_ID"
+export SESSION_SLUG="$SESSION_SLUG"
+export SESSION_BRANCH="session/$AGENT_ID/$SESSION_SLUG"
+export PS1="($AGENT_ID:$SESSION_SLUG) \w $ "
+echo "✅ Session active: $SESSION_AGENT/$SESSION_SLUG"
+EOF
+  
   git add sessions/
-  git commit -m "[$AGENT_ID] Move session to active"
+  git commit -m "[$AGENT_ID] Move session to active and create activation"
   
-  # Step 7: Create session branch
+  # Step 8: Create session branch and activate
   git checkout -b session/$AGENT_ID/$SESSION_SLUG
+  cd sessions/active/$AGENT_ID/$SESSION_SLUG
+  source .session-env
   
-  echo "✅ Ready to work on $SESSION_SLUG"
+  # Session is now active with proper git identity
 else
   echo "❌ Push failed - another agent claimed session first"
   echo "Rolling back..."
@@ -720,10 +730,8 @@ Complete repository layout with multi-agent support:
 
 AGENT_ID="cursor-1"
 SESSION_SLUG="2025-10-14-auth-system"
-
-# Setup (one-time per worktree)
-git config user.name "Cursor-Local-1 (via cristos)"
-git config user.email "cristos+cursor-1@agents.local"
+USER_NAME=$(git config user.name)
+USER_EMAIL=$(git config user.email)
 
 # Pull latest
 git pull origin main
@@ -737,14 +745,29 @@ if git push origin main; then
   # Move to active
   mkdir -p sessions/active/$AGENT_ID
   mv sessions/planned/$SESSION_SLUG sessions/active/$AGENT_ID/
+  
+  # Create session activation file
+  cat > sessions/active/$AGENT_ID/$SESSION_SLUG/.session-env << EOF
+export GIT_AUTHOR_NAME="Agent-$AGENT_ID (via $USER_NAME)"
+export GIT_AUTHOR_EMAIL="$USER_EMAIL+$AGENT_ID@agents.local"
+export GIT_COMMITTER_NAME="Agent-$AGENT_ID (via $USER_NAME)"
+export GIT_COMMITTER_EMAIL="$USER_EMAIL+$AGENT_ID@agents.local"
+export SESSION_AGENT="$AGENT_ID"
+export SESSION_SLUG="$SESSION_SLUG"
+export PS1="($AGENT_ID:$SESSION_SLUG) \w $ "
+echo "✅ Session active: \$SESSION_AGENT/\$SESSION_SLUG"
+EOF
+  
   git add sessions/
-  git commit -m "[$AGENT_ID] Move session to active"
+  git commit -m "[$AGENT_ID] Move session to active and create activation"
   git push origin main
   
-  # Create branch
+  # Create branch and activate
   git checkout -b session/$AGENT_ID/$SESSION_SLUG
+  cd sessions/active/$AGENT_ID/$SESSION_SLUG
+  source .session-env
   
-  echo "✅ Ready to work!"
+  # Ready to work with session context active
 else
   echo "❌ Claim failed, rolling back"
   git reset --hard HEAD~1
@@ -798,7 +821,8 @@ EOF
   git commit -m "[$AGENT_ID] Create KB merge session"
 fi
 
-# 3. Move to completed
+# 3. Move to completed and deactivate
+cd ../../../..  # Back to repo root
 mv sessions/active/$AGENT_ID/$SESSION_SLUG sessions/completed/
 git add sessions/
 git commit -m "[$AGENT_ID] Complete session $SESSION_SLUG"
@@ -810,10 +834,12 @@ git merge --squash session/$AGENT_ID/$SESSION_SLUG
 git commit -m "[$AGENT_ID] Session complete: $SESSION_SLUG"
 git push origin main
 
-# 5. Cleanup
+# 5. Cleanup and deactivate
 git branch -d session/$AGENT_ID/$SESSION_SLUG
+unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+unset SESSION_AGENT SESSION_SLUG SESSION_BRANCH PS1
 
-echo "✅ Session complete!"
+echo "✅ Session complete! Session context deactivated."
 ```
 
 ---
@@ -888,21 +914,23 @@ Session files are agent-specific and shouldn't conflict if namespaced correctly.
 
 **Solution:**
 ```bash
-# Check current config
-git config user.name
-git config user.email
+# Check if session is activated
+echo $GIT_AUTHOR_NAME
+echo $SESSION_AGENT
 
-# Set correctly (in worktree)
-git config user.name "Cursor-Local-1 (via cristos)"
-git config user.email "cristos+cursor-1@agents.local"
+# If not set, activate session
+cd sessions/active/your-agent-id/your-session/
+source .session-env
 
-# Verify
-git config --get user.name
-git config --get user.email
+# Verify activation
+echo $GIT_AUTHOR_NAME  # Should show: Agent-your-id (via username)
+echo $SESSION_AGENT    # Should show: your-agent-id
 
 # If commits already made with wrong identity, amend last commit
 git commit --amend --reset-author --no-edit
 ```
+
+**Cause:** Session not activated before committing. Always `source .session-env` before working.
 
 ---
 
