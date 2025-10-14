@@ -759,7 +759,7 @@ Complete repository layout with multi-agent support:
 │       │       ├── SESSION.md
 │       │       └── worklog.md
 │       │
-│       ├── active/             # Active sessions (any agent)
+│       ├── active/             # Active sessions
 │       │   ├── 2025-10-14-auth-system/
 │       │   │   ├── .session-env      # Session activation
 │       │   │   ├── SESSION.md
@@ -773,7 +773,7 @@ Complete repository layout with multi-agent support:
 │       │       ├── worklog.md
 │       │       └── active-plan.md
 │       │
-│       ├── completed/          # Namespace removed
+│       ├── completed/          # Finished and merged
 │       │   ├── 2025-10-13-initial-setup/
 │       │   │   ├── SESSION.md
 │       │   │   ├── worklog.md
@@ -784,7 +784,11 @@ Complete repository layout with multi-agent support:
 │       │       ├── worklog.md
 │       │       └── 2025-10-12-database-schema.patch
 │       │
-│       └── planned/            # Any agent can claim
+│       ├── drafting/           # Being defined
+│       │   └── 2025-10-17-new-idea/
+│       │       └── SESSION.md (incomplete)
+│       │
+│       └── planned/            # Ready to claim
 │           ├── 2025-10-15-new-feature/
 │           │   └── SESSION.md
 │           ├── kb-2025-10-14-merge-auth-patterns/
