@@ -8,14 +8,20 @@ This directory contains organized session folders for tracking agent work across
 
 ```
 sessions/
+├── _bin/            # Utility scripts
+│   ├── claim-session
+│   └── complete-session
+├── _templates/      # Templates for sessions and configs
+│   ├── kb-merge-SESSION.md
+│   └── session-env.template
+├── SESSIONS-README.md        # This file (essential protocol)
+├── SESSIONS-REFERENCE.md     # Detailed examples & commands
+├── abandoned/       # Cancelled/incomplete sessions
 ├── active/          # Currently active sessions
 │   ├── {agent-id}/  # Agent-specific active sessions
 │   └── ...
 ├── completed/       # Finished sessions (all agents)
-├── planned/         # Future sessions (any agent can claim)
-├── abandoned/       # Cancelled/incomplete sessions
-├── SESSIONS-README.md        # This file (essential protocol)
-└── SESSIONS-REFERENCE.md     # Detailed examples & commands
+└── planned/         # Future sessions (any agent can claim)
 ```
 
 ## Multi-Agent Coordination
@@ -244,7 +250,26 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 
 ## Quick Start
 
-### Starting a Session
+### Using Utility Scripts (Recommended)
+
+```bash
+# Claim and activate session
+./_bin/claim-session cursor-1 2025-10-14-feature-x
+
+# Activate session environment
+cd sessions/active/cursor-1/2025-10-14-feature-x
+source .session-env
+
+# Work on session...
+
+# Complete session
+cd ../../../..
+./_bin/complete-session cursor-1 2025-10-14-feature-x
+```
+
+### Manual Process (Advanced)
+
+#### Starting a Session
 
 ```bash
 # 1. Claim session
@@ -275,7 +300,7 @@ source .session-env
 # 4. Start work!
 ```
 
-### Completing a Session
+#### Completing a Session
 
 ```bash
 # 1. Finalize documentation (worklog, active-plan, generate patch)
