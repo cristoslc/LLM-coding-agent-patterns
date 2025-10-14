@@ -1,8 +1,60 @@
-# Agent Sessions Directory
-
-This directory contains organized session folders for tracking agent work across different states and purposes.
+# Agent Sessions Protocol
 
 > **📖 For detailed examples, git commands, and troubleshooting:** See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md)
+
+## Purpose
+
+Sessions are **structured units of work** that enable multiple AI agents to collaborate on a codebase concurrently without conflicts. Each session:
+
+- Has clear **context** (what needs to be done)
+- Has **acceptance criteria** (definition of done)
+- Tracks **progress** (worklog, decisions, lessons learned)
+- Produces **artifacts** (code changes, documentation, knowledge)
+- Maintains **traceability** (git attribution, patch files)
+
+Sessions move through states (`planned` → `active` → `completed`) as work progresses, creating a clear audit trail of what was done, by whom, and why.
+
+## Workflow Overview
+
+```mermaid
+flowchart LR
+    Planned["planned/
+    (unclaimed)"] -->|"Claim"| Active["active/{agent}/
+    (in progress)"]
+    Active -->|"Complete"| Completed["completed/
+    (merged)"]
+    Active -->|"Cancel"| Abandoned["abandoned/
+    (documented)"]
+```
+
+### Basic Workflow
+
+1. **Claim a session** - Agent atomically claims work from `planned/`
+2. **Activate session** - Environment variables establish agent identity
+3. **Work** - Make changes, update worklog, capture learnings
+4. **Complete** - Generate patch, create KB merge session if needed, merge to main
+5. **Deactivate** - Unset environment, session context ends
+
+### Multi-Agent Workflow
+
+Multiple agents work concurrently:
+- Agent `cursor-1` claims session A → works → completes
+- Agent `claude-a` claims session B → works → completes (in parallel)
+- Agent `cursor-1` claims session C → works → completes
+
+Agents coordinate through **git itself** (no orchestrator needed):
+- Session claims via atomic git push
+- Namespace isolation (`active/cursor-1/`, `active/claude-a/`)
+- Optimistic locking (race conditions handled gracefully)
+
+## Core Principles
+
+1. **Git as Coordinator** - Use git itself for synchronization (no external orchestrator)
+2. **Session-Scoped Activation** - Agent identity via environment variables, session lifecycle
+3. **Namespace Isolation** - Each agent works in separate directories/branches
+4. **Optimistic Locking** - Session claims via atomic git operations
+5. **Full Traceability** - Every commit attributed to specific agent
+6. **Two-Phase Knowledge** - Capture learnings fast, merge deliberately via KB sessions
 
 ## Directory Structure
 
@@ -24,19 +76,9 @@ sessions/
 └── planned/         # Future sessions (any agent can claim)
 ```
 
-## Multi-Agent Coordination
+**Utilities** (`_bin/`, `_templates/`) sort first, keeping them separate from **state directories** (`abandoned/`, `active/`, `completed/`, `planned/`).
 
-This protocol supports multiple agents working concurrently across local and cloud environments **without an orchestrator**. Agents coordinate through git using optimistic locking and namespace isolation.
-
-### Core Principles
-
-1. **Git as Coordinator** - Use git itself for synchronization (no external orchestrator)
-2. **Namespace Isolation** - Each agent works in separate directories/branches
-3. **Optimistic Locking** - Session claims via atomic git operations
-4. **Agent Attribution** - Every commit tagged with agent identity
-5. **Two-Phase Knowledge** - Capture learnings fast, merge deliberately
-
-### Session Activation
+## Session Activation
 
 When claiming a session, the agent context is established through environment variables (not git config):
 
@@ -58,7 +100,7 @@ export SESSION_SLUG="2025-10-14-auth-system"
 
 **Session activation = Agent identity for that session.**
 
-### Session Claiming & Activation
+## Session Claiming & Activation
 
 Claiming a session establishes the agent context for that work:
 
