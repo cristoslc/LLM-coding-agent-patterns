@@ -78,15 +78,40 @@ Completes a session and merges to main.
 
 Worktrees are **optional infrastructure** for running multiple sessions concurrently. They're not required for the protocol to work.
 
+### Recommended Structure
+
+Keep worktrees organized in a subdirectory to avoid clutter:
+
 ```bash
-# Main repo stays on main branch
+# Main repo
 cd /path/to/repo
 
-# Create worktree for concurrent session work
-git worktree add ../repo-workspace-1 main
-git worktree add ../repo-workspace-2 main
+# Create worktrees directory
+mkdir -p ../repo-worktrees
 
-# No git config needed - session activation handles identity
+# Create worktrees in organized location
+git worktree add ../repo-worktrees/agent-1 main
+git worktree add ../repo-worktrees/agent-2 main
+git worktree add ../repo-worktrees/agent-3 main
+
+# Result:
+# /path/to/repo/              # Main repo
+# /path/to/repo-worktrees/    # Worktrees container
+#   ├── agent-1/
+#   ├── agent-2/
+#   └── agent-3/
+```
+
+### Worktree Cleanup
+
+When a session completes, optionally remove the worktree if no longer needed:
+
+```bash
+# After session completion
+git worktree remove ../repo-worktrees/agent-1
+
+# Or prune all deleted worktrees
+git worktree prune
 ```
 
 **Benefits:**
@@ -94,6 +119,7 @@ git worktree add ../repo-workspace-2 main
 - Isolated working directories (no file conflicts)
 - Can run multiple sessions concurrently
 - All see same git history
+- Clean organization (not scattered in parent dir)
 
 **Limitations:**
 - Can't checkout same branch in multiple worktrees
@@ -779,10 +805,12 @@ Complete repository layout with multi-agent support:
 │
 └── README.md
 
-# Worktree layout (separate directories)
-/repo/                          # Main worktree (cursor-1)
-/repo-agent-2/                  # claude-a worktree
-/repo-agent-3/                  # Additional agent worktree
+# Worktree layout (if using worktrees)
+/repo/                          # Main repo
+/repo-worktrees/                # Worktrees container
+  ├── agent-1/                  # First agent worktree
+  ├── agent-2/                  # Second agent worktree
+  └── agent-3/                  # Additional agent worktree
 ```
 
 ---

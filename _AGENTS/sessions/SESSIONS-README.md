@@ -80,25 +80,14 @@ sessions/
 
 ## Session Activation
 
-When claiming a session, the agent context is established through environment variables (not git config):
+Agent identity is established per-session via environment variables. The `claim-session` script creates a `.session-env` file in the session directory. Source it to activate:
 
 ```bash
-# Set per-session (in .session-env file)
-export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
-export GIT_AUTHOR_EMAIL="cristos+cursor-1@agents.local"
-export GIT_COMMITTER_NAME="Cursor-Local-1 (via cristos)"
-export GIT_COMMITTER_EMAIL="cristos+cursor-1@agents.local"
-export SESSION_AGENT="cursor-1"
-export SESSION_SLUG="2025-10-14-auth-system"
+cd sessions/active/{agent-id}/{session-slug}
+source .session-env
 ```
 
-**Why environment variables?**
-- No git config pollution (safe for supervised agents sharing workspace)
-- Session-scoped (activation ends when session completes)
-- Explicit identity per session
-- Works in any context (worktree or main repo)
-
-**Session activation = Agent identity for that session.**
+Session activation sets git identity and environment for that session only.
 
 ## Session Claiming & Activation
 

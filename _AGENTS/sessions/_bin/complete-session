@@ -103,4 +103,8 @@ echo ""
 echo "⚠️  Remember to deactivate session environment:"
 echo "  unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL"
 echo "  unset SESSION_AGENT SESSION_SLUG SESSION_BRANCH PS1"
+echo ""
+echo "💡 If you used a worktree, clean it up:"
+echo "  git worktree remove <worktree-path>"
+echo "  git worktree prune"
 
