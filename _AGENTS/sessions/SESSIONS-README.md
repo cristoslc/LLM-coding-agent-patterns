@@ -283,17 +283,17 @@ Simplified structure for KB merge sessions:
 - KB merge session auto-created at completion
 - Any agent can execute merge
 - Deliberate review and quality control
-- Merge to: `_AGENTS/knowledge/shared/`
+- Merge to: `_AGENTS/knowledge/`
 
 ### KB Access Rules
 
 | Action | Path | When | Who |
 |--------|------|------|-----|
-| **Read KB** | `knowledge/shared/` | Anytime | All agents |
+| **Read KB** | `knowledge/` | Anytime | All agents |
 | **Write Learnings** | `knowledge/sessions/{session}/` | During work | Owning agent |
-| **Merge to Canonical** | `knowledge/shared/` | KB merge session only | Assigned agent |
+| **Merge to Canonical** | `knowledge/` | KB merge session only | Assigned agent |
 
-**Critical:** Never write directly to `knowledge/shared/` during regular sessions. Always use KB merge sessions.
+**Critical:** Only `kb-` prefixed sessions may write to the canonical knowledge base. All other sessions must write exclusively to `knowledge/sessions/{session-id}/`.
 
 ## Git Workflow SOP
 
@@ -319,7 +319,7 @@ git add sessions/ && git commit -m "[2025-10-14-feature-x] docs: update worklog"
 git add _AGENTS/knowledge/sessions/ && git commit -m "[2025-10-14-feature-x] docs: capture learnings"
 
 # KB canonical (only in KB merge sessions)
-git add _AGENTS/knowledge/shared/ && git commit -m "[2025-10-14-feature-x] docs: merge KB learnings"
+git add _AGENTS/knowledge/ && git commit -m "[2025-10-14-feature-x] docs: merge KB learnings"
 ```
 
 **Note:** Git automatically uses `GIT_AUTHOR_NAME`, `GIT_COMMITTER_NAME`, etc. from environment when set.
@@ -353,7 +353,7 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 6. **Handle race conditions gracefully** - Pick different session if claim fails
 7. **Namespace everything** - Use `active/{session-slug}/` and `session/{session-id}`
 8. **Session-prefixed commits** - Every commit tagged with `[{session-id}]`
-9. **KB learnings are session-scoped** - Never write directly to `knowledge/shared/`
+9. **KB learnings are session-scoped** - Never write directly to `knowledge/`
 10. **Create KB merge sessions** - Auto-generate at session completion
 11. **Verify session activation** - Check environment variables are set (`echo $GIT_AUTHOR_NAME`)
 12. **Coordinate via git** - No file system locks or external tools
