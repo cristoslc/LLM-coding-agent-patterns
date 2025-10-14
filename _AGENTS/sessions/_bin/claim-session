@@ -1,0 +1,95 @@
+#!/bin/bash
+# Session claim and activation script
+# Usage: ./claim-session <agent-id> <session-slug>
+
+set -e
+
+AGENT_ID="${1:-}"
+SESSION_SLUG="${2:-}"
+USER_NAME=$(git config user.name || echo "Unknown")
+USER_EMAIL=$(git config user.email || echo "unknown@example.com")
+
+# Validate arguments
+if [ -z "$AGENT_ID" ] || [ -z "$SESSION_SLUG" ]; then
+  echo "Usage: $0 <agent-id> <session-slug>"
+  echo "Example: $0 cursor-1 2025-10-14-auth-system"
+  exit 1
+fi
+
+echo "🔍 Attempting to claim session: $SESSION_SLUG as $AGENT_ID"
+
+# Step 1: Pull latest state
+echo "📥 Pulling latest state..."
+git pull --rebase origin main
+
+# Step 2: Check if session already claimed
+if grep -q "$SESSION_SLUG" .agents/sessions.lock 2>/dev/null; then
+  echo "❌ Session already claimed by another agent"
+  echo ""
+  echo "Available sessions:"
+  ls -1 sessions/planned/ 2>/dev/null || echo "  (none)"
+  exit 1
+fi
+
+# Step 3: Check if session exists
+if [ ! -d "sessions/planned/$SESSION_SLUG" ]; then
+  echo "❌ Session does not exist in planned/"
+  echo ""
+  echo "Available sessions:"
+  ls -1 sessions/planned/ 2>/dev/null || echo "  (none)"
+  exit 1
+fi
+
+# Step 4: Claim session atomically
+TIMESTAMP=$(date +%s)
+mkdir -p .agents
+echo "$AGENT_ID:$SESSION_SLUG:$TIMESTAMP" >> .agents/sessions.lock
+git add .agents/sessions.lock
+git commit -m "[$AGENT_ID] Claim session $SESSION_SLUG"
+
+# Step 5: Push (atomic operation)
+if git push origin main; then
+  echo "✅ Session claimed successfully"
+  
+  # Step 6: Move session to active
+  mkdir -p sessions/active/$AGENT_ID
+  mv sessions/planned/$SESSION_SLUG sessions/active/$AGENT_ID/
+  
+  # Step 7: Create session activation file
+  cat > sessions/active/$AGENT_ID/$SESSION_SLUG/.session-env << EOF
+export GIT_AUTHOR_NAME="Agent-$AGENT_ID (via $USER_NAME)"
+export GIT_AUTHOR_EMAIL="$USER_EMAIL+$AGENT_ID@agents.local"
+export GIT_COMMITTER_NAME="Agent-$AGENT_ID (via $USER_NAME)"
+export GIT_COMMITTER_EMAIL="$USER_EMAIL+$AGENT_ID@agents.local"
+export SESSION_AGENT="$AGENT_ID"
+export SESSION_SLUG="$SESSION_SLUG"
+export SESSION_BRANCH="session/$AGENT_ID/$SESSION_SLUG"
+export PS1="($AGENT_ID:$SESSION_SLUG) \w $ "
+echo "✅ Session active: \$SESSION_AGENT/\$SESSION_SLUG"
+EOF
+  
+  git add sessions/
+  git commit -m "[$AGENT_ID] Move session to active and create activation"
+  git push origin main
+  
+  # Step 8: Create session branch
+  git checkout -b session/$AGENT_ID/$SESSION_SLUG
+  
+  echo ""
+  echo "✅ Session ready: $SESSION_SLUG"
+  echo ""
+  echo "To activate session environment:"
+  echo "  cd sessions/active/$AGENT_ID/$SESSION_SLUG"
+  echo "  source .session-env"
+  echo ""
+  echo "Session branch: session/$AGENT_ID/$SESSION_SLUG"
+  
+else
+  echo "❌ Push failed - another agent claimed session first"
+  echo "Rolling back..."
+  git reset --hard HEAD~1
+  echo ""
+  echo "Try claiming a different session"
+  exit 1
+fi
+
