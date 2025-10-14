@@ -36,7 +36,7 @@ Claims and activates a session atomically.
 ./_bin/claim-session cursor-1 2025-10-14-auth-system
 
 # Then activate:
-cd sessions/active/cursor-1/2025-10-14-auth-system
+cd sessions/active/2025-10-14-auth-system
 source .session-env
 ```
 
@@ -44,7 +44,7 @@ source .session-env
 1. Pulls latest git state
 2. Checks session availability
 3. Claims session atomically via git push
-4. Moves session to `active/{agent-id}/`
+4. Moves session to `active/`
 5. Creates `.session-env` file
 6. Creates session branch
 7. Provides activation instructions
@@ -207,11 +207,10 @@ if git push origin main; then
   echo "✅ Session claimed successfully"
   
   # Step 6: Move session to active
-  mkdir -p sessions/active/$AGENT_ID
-  mv sessions/planned/$SESSION_SLUG sessions/active/$AGENT_ID/
+  mv sessions/planned/$SESSION_SLUG sessions/active/
   
   # Step 7: Create session activation file
-  cat > sessions/active/$AGENT_ID/$SESSION_SLUG/.session-env << EOF
+  cat > sessions/active/$SESSION_SLUG/.session-env << EOF
 export GIT_AUTHOR_NAME="Agent-$AGENT_ID (via $(git config user.name))"
 export GIT_AUTHOR_EMAIL="$(git config user.email)+$AGENT_ID@agents.local"
 export GIT_COMMITTER_NAME="Agent-$AGENT_ID (via $(git config user.name))"
@@ -228,7 +227,7 @@ EOF
   
   # Step 8: Create session branch and activate
   git checkout -b session/$AGENT_ID/$SESSION_SLUG
-  cd sessions/active/$AGENT_ID/$SESSION_SLUG
+  cd sessions/active/$SESSION_SLUG
   source .session-env
   
   # Session is now active with proper git identity
@@ -535,7 +534,7 @@ function handleRequest(req) {
 # Edit src/api.js to use processAndValidate
 
 # Document in worklog
-cat >> sessions/active/cursor-1/2025-10-14-feature-x/worklog.md << 'EOF'
+cat >> sessions/active/2025-10-14-feature-x/worklog.md << 'EOF'
 
 ## [2025-10-14 15:30] Merge Conflict Resolution
 
@@ -760,21 +759,19 @@ Complete repository layout with multi-agent support:
 │       │       ├── SESSION.md
 │       │       └── worklog.md
 │       │
-│       ├── active/             # Agent-namespaced
-│       │   ├── cursor-1/
-│       │   │   └── 2025-10-14-auth-system/
-│       │   │       ├── .session-env      # Session activation
-│       │   │       ├── SESSION.md
-│       │   │       ├── worklog.md
-│       │   │       ├── active-plan.md
-│       │   │       └── subsessions.md
+│       ├── active/             # Active sessions (any agent)
+│       │   ├── 2025-10-14-auth-system/
+│       │   │   ├── .session-env      # Session activation
+│       │   │   ├── SESSION.md
+│       │   │   ├── worklog.md
+│       │   │   ├── active-plan.md
+│       │   │   └── subsessions.md
 │       │   │
-│       │   └── claude-a/
-│       │       └── 2025-10-14-api-work/
-│       │           ├── .session-env      # Session activation
-│       │           ├── SESSION.md
-│       │           ├── worklog.md
-│       │           └── active-plan.md
+│       │   └── 2025-10-14-api-work/
+│       │       ├── .session-env      # Session activation
+│       │       ├── SESSION.md
+│       │       ├── worklog.md
+│       │       └── active-plan.md
 │       │
 │       ├── completed/          # Namespace removed
 │       │   ├── 2025-10-13-initial-setup/
@@ -838,11 +835,10 @@ git commit -m "[$AGENT_ID] Claim session $SESSION_SLUG"
 
 if git push origin main; then
   # Move to active
-  mkdir -p sessions/active/$AGENT_ID
-  mv sessions/planned/$SESSION_SLUG sessions/active/$AGENT_ID/
+  mv sessions/planned/$SESSION_SLUG sessions/active/
   
   # Create session activation file
-  cat > sessions/active/$AGENT_ID/$SESSION_SLUG/.session-env << EOF
+  cat > sessions/active/$SESSION_SLUG/.session-env << EOF
 export GIT_AUTHOR_NAME="Agent-$AGENT_ID (via $USER_NAME)"
 export GIT_AUTHOR_EMAIL="$USER_EMAIL+$AGENT_ID@agents.local"
 export GIT_COMMITTER_NAME="Agent-$AGENT_ID (via $USER_NAME)"
@@ -859,7 +855,7 @@ EOF
   
   # Create branch and activate
   git checkout -b session/$AGENT_ID/$SESSION_SLUG
-  cd sessions/active/$AGENT_ID/$SESSION_SLUG
+  cd sessions/active/$SESSION_SLUG
   source .session-env
   
   # Ready to work with session context active
@@ -880,7 +876,7 @@ AGENT_ID="cursor-1"
 SESSION_SLUG="2025-10-14-auth-system"
 
 # 1. Generate patch
-cd sessions/active/$AGENT_ID/$SESSION_SLUG
+cd sessions/active/$SESSION_SLUG
 git format-patch main --stdout > $SESSION_SLUG.patch
 
 # 2. Check for KB learnings
@@ -917,8 +913,8 @@ EOF
 fi
 
 # 3. Move to completed and deactivate
-cd ../../../..  # Back to repo root
-mv sessions/active/$AGENT_ID/$SESSION_SLUG sessions/completed/
+cd ../../..  # Back to repo root
+mv sessions/active/$SESSION_SLUG sessions/completed/
 git add sessions/
 git commit -m "[$AGENT_ID] Complete session $SESSION_SLUG"
 
@@ -996,7 +992,7 @@ git commit -m "[your-agent-id] Initialize session learnings"
 **Solution:**
 ```bash
 # Session files conflicts: always keep your version
-git checkout --ours sessions/active/your-agent-id/session/worklog.md
+git checkout --ours sessions/active/your-session/worklog.md
 git add sessions/
 git commit -m "[your-agent-id] Resolve session files conflict"
 ```
@@ -1014,7 +1010,7 @@ echo $GIT_AUTHOR_NAME
 echo $SESSION_AGENT
 
 # If not set, activate session
-cd sessions/active/your-agent-id/your-session/
+cd sessions/active/your-session/
 source .session-env
 
 # Verify activation

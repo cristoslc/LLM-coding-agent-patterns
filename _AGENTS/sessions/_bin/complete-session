@@ -14,7 +14,7 @@ if [ -z "$AGENT_ID" ] || [ -z "$SESSION_SLUG" ]; then
   exit 1
 fi
 
-SESSION_PATH="sessions/active/$AGENT_ID/$SESSION_SLUG"
+SESSION_PATH="sessions/active/$SESSION_SLUG"
 
 # Verify session exists
 if [ ! -d "$SESSION_PATH" ]; then
