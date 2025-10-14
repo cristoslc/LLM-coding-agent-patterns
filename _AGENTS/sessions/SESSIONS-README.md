@@ -44,7 +44,7 @@ Multiple agents work concurrently:
 
 Agents coordinate through **git itself** (no orchestrator needed):
 - Session claims via atomic git push
-- Namespace isolation (`active/cursor-1/`, `active/claude-a/`)
+- Namespace isolation (agent-id in branch names and commits)
 - Optimistic locking (race conditions handled gracefully)
 
 ## Core Principles
@@ -70,7 +70,8 @@ sessions/
 ├── SESSIONS-REFERENCE.md     # Detailed examples & commands
 ├── abandoned/       # Cancelled/incomplete sessions
 ├── active/          # Currently active sessions
-│   ├── {agent-id}/  # Agent-specific active sessions
+│   ├── 2025-10-14-auth-system/
+│   ├── 2025-10-14-api-work/
 │   └── ...
 ├── completed/       # Finished sessions (all agents)
 └── planned/         # Future sessions (any agent can claim)
@@ -83,7 +84,7 @@ sessions/
 Agent identity is established per-session via environment variables. The `claim-session` script creates a `.session-env` file in the session directory. Source it to activate:
 
 ```bash
-cd sessions/active/{agent-id}/{session-slug}
+cd sessions/active/{session-slug}
 source .session-env
 ```
 
@@ -168,7 +169,7 @@ flowchart TD
 
 **Planned → Active:**
 1. Claim session via `.agents/sessions.lock`
-2. Move to `sessions/active/{agent-id}/`
+2. Move to `sessions/active/`
 3. Create session branch: `session/{agent-id}/{session-slug}`
 4. Begin work
 
@@ -288,13 +289,13 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 ./_bin/claim-session cursor-1 2025-10-14-feature-x
 
 # Activate session environment
-cd sessions/active/cursor-1/2025-10-14-feature-x
+cd sessions/active/2025-10-14-feature-x
 source .session-env
 
 # Work on session...
 
 # Complete session
-cd ../../../..
+cd ../../..
 ./_bin/complete-session cursor-1 2025-10-14-feature-x
 ```
 
@@ -311,10 +312,9 @@ git commit -m "[cursor-1] Claim session 2025-10-14-feature-x"
 git push origin main  # If fails, pick different session
 
 # 2. Move to active and create activation file
-mkdir -p sessions/active/cursor-1
-mv sessions/planned/2025-10-14-feature-x sessions/active/cursor-1/
+mv sessions/planned/2025-10-14-feature-x sessions/active/
 
-cat > sessions/active/cursor-1/2025-10-14-feature-x/.session-env << 'EOF'
+cat > sessions/active/2025-10-14-feature-x/.session-env << 'EOF'
 export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
 export GIT_AUTHOR_EMAIL="cristos+cursor-1@agents.local"
 export GIT_COMMITTER_NAME="Cursor-Local-1 (via cristos)"
@@ -325,7 +325,7 @@ EOF
 
 # 3. Create branch and activate session
 git checkout -b session/cursor-1/2025-10-14-feature-x
-cd sessions/active/cursor-1/2025-10-14-feature-x
+cd sessions/active/2025-10-14-feature-x
 source .session-env
 
 # 4. Start work!
@@ -343,8 +343,8 @@ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
 fi
 
 # 3. Move to completed and deactivate
-cd ../../../..  # Back to repo root
-mv sessions/active/cursor-1/2025-10-14-feature-x sessions/completed/
+cd ../../..  # Back to repo root
+mv sessions/active/2025-10-14-feature-x sessions/completed/
 git add sessions/ && git commit -m "[cursor-1] Complete session"
 
 # 4. Merge to main
