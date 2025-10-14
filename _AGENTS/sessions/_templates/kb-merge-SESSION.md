@@ -5,7 +5,6 @@
 This session merges knowledge base learnings from a completed session.
 
 - **Source Session**: {{SOURCE_SESSION}}
-- **Source Agent**: {{AGENT_ID}}
 - **Completed**: {{TIMESTAMP}}
 - **Learnings Path**: `_AGENTS/knowledge/sessions/{{SOURCE_SESSION}}/learnings.md`
 

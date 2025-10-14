@@ -2,17 +2,16 @@
 # Copy this to: sessions/active/{session-slug}/.session-env
 # Then update the values and source it: source .session-env
 
-export GIT_AUTHOR_NAME="Agent-{{AGENT_ID}} (via {{USER_NAME}})"
-export GIT_AUTHOR_EMAIL="{{USER_EMAIL}}+{{AGENT_ID}}@agents.local"
-export GIT_COMMITTER_NAME="Agent-{{AGENT_ID}} (via {{USER_NAME}})"
-export GIT_COMMITTER_EMAIL="{{USER_EMAIL}}+{{AGENT_ID}}@agents.local"
+export GIT_AUTHOR_NAME="Session-{{SESSION_SLUG}} (via {{USER_NAME}})"
+export GIT_AUTHOR_EMAIL="{{USER_EMAIL}}+{{SESSION_SLUG}}@agents.local"
+export GIT_COMMITTER_NAME="Session-{{SESSION_SLUG}} (via {{USER_NAME}})"
+export GIT_COMMITTER_EMAIL="{{USER_EMAIL}}+{{SESSION_SLUG}}@agents.local"
 
-export SESSION_AGENT="{{AGENT_ID}}"
 export SESSION_SLUG="{{SESSION_SLUG}}"
-export SESSION_BRANCH="session/{{AGENT_ID}}/{{SESSION_SLUG}}"
+export SESSION_BRANCH="session/{{SESSION_SLUG}}"
 
 # Optional: Update shell prompt to show active session
-export PS1="({{AGENT_ID}}:{{SESSION_SLUG}}) \w $ "
+export PS1="({{SESSION_SLUG}}) \w $ "
 
-echo "✅ Session active: $SESSION_AGENT/$SESSION_SLUG"
+echo "✅ Session active: $SESSION_SLUG"
 
