@@ -2,62 +2,108 @@
 
 This directory contains organized session folders for tracking agent work across different states and purposes.
 
+> **📖 For detailed examples, git commands, and troubleshooting:** See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md)
+
 ## Directory Structure
 
 ```
 sessions/
 ├── active/          # Currently active sessions
-├── completed/       # Finished sessions
-├── planned/         # Future sessions
+│   ├── {agent-id}/  # Agent-specific active sessions
+│   └── ...
+├── completed/       # Finished sessions (all agents)
+├── planned/         # Future sessions (any agent can claim)
 ├── abandoned/       # Cancelled/incomplete sessions
-└── SESSIONS-README.md        # This file
+├── SESSIONS-README.md        # This file (essential protocol)
+└── SESSIONS-REFERENCE.md     # Detailed examples & commands
 ```
 
-## Session Folder Naming Convention
+## Multi-Agent Coordination
 
-All session folders follow this pattern:
-```
-YYYY-MM-DD-descriptive-slug
+This protocol supports multiple agents working concurrently across local and cloud environments **without an orchestrator**. Agents coordinate through git using optimistic locking and namespace isolation.
+
+### Core Principles
+
+1. **Git as Coordinator** - Use git itself for synchronization (no external orchestrator)
+2. **Namespace Isolation** - Each agent works in separate directories/branches
+3. **Optimistic Locking** - Session claims via atomic git operations
+4. **Agent Attribution** - Every commit tagged with agent identity
+5. **Two-Phase Knowledge** - Capture learnings fast, merge deliberately
+
+### Agent Identity Setup
+
+Each agent must configure a unique git identity:
+
+```bash
+# Format: "{Agent-Type}-{Agent-ID} (via {Human})"
+git config user.name "Cursor-Local-1 (via cristos)"
+git config user.email "cristos+cursor-1@agents.local"
 ```
 
-⚠️ Use system time functions as needed to orient yourself temporally.
+**Why?** Full commit traceability, easy rollback, clear accountability in git history.
+
+**Setup:** Git worktrees recommended (one per agent). See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#git-worktrees-setup) for details.
+
+### Session Claiming
+
+Agents claim sessions atomically via git:
+
+1. Pull latest: `git pull origin main`
+2. Check `.agents/sessions.lock` for availability
+3. Add claim: `echo "{agent-id}:{session-slug}:$(date +%s)" >> .agents/sessions.lock`
+4. Commit and push: `git commit -m "[{agent-id}] Claim session" && git push`
+5. If push fails (race condition), pick different session
+
+See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#session-claim-protocol) for complete code example.
+
+## Naming Conventions
+
+### Session Folders
+
+Format: `YYYY-MM-DD-descriptive-slug`
+
+**Standard sessions:**
+- `2025-10-14-auth-system`
+- `2025-10-14-api-refactor`
+
+**KB merge sessions:**
+- `kb-2025-10-14-merge-auth-patterns`
+- `kb-2025-10-14-merge-api-security`
+
+### Git Branches
+
+Format: `session/{agent-id}/YYYY-MM-DD-descriptive-slug`
 
 **Examples:**
-- `2024-12-19-comfyui-ubuntu25-rocm-install`
-- `2024-12-20-docker-compose-setup`
-- `2024-12-21-security-hardening`
+- `session/cursor-1/2025-10-14-auth-system`
+- `session/claude-a/kb-2025-10-14-merge-auth-patterns`
+
+### Commit Messages
+
+Format: `[{agent-id}] <type>: <description>`
+
+**Examples:**
+- `[cursor-1] feat: add user authentication`
+- `[claude-a] fix: resolve memory leak`
+- `[cursor-1] docs: update API documentation`
 
 ## Session Contents
 
-Each session folder should contain:
+### Standard Session Files
 
-### Required Files
-- **`SESSION.md`** - Core session documentation
-  - Context: What the session is about
-  - Acceptance Criteria: Success metrics
-  - Original Implementation Plan: Initial approach
+- **`SESSION.md`** - Context, acceptance criteria, implementation plan
+- **`worklog.md`** - Progress tracking with timestamps
+- **`active-plan.md`** - Dynamic task lists, issues, next steps
+- **`subsessions.md`** - Sub-session tracking
+- **`{session-slug}.patch`** - Final patch file (generated at completion)
 
-### Active Session Files
-- **`worklog.md`** - Progress tracking (like Jira comments)
-  - Session overview and status
-  - Work log entries with timestamps
-  - Decisions, issues, and solutions
-  - Next steps
+### KB Merge Session Files
 
-- **`active-plan.md`** - Dynamic implementation plan
-  - Current status and currentsubsession tracking
-  - Checkbox-based task lists
-  - Issues and blockers section
-  - Lessons learned
-  - Next actions
+Simplified structure for KB merge sessions:
+- **`SESSION.md`** - Auto-generated with source session reference
+- **`worklog.md`** - KB merge decisions and conflicts
 
-- **`subsessions.md`** - Sub-sessions
-  - Subsessions list
-  - Subsession status
-
-- **`{{session-slug}}.patch`** - Final patch file, generated after session is complete
-
-## Session Lifecycle Overview
+## Session Lifecycle
 
 ```mermaid
 flowchart TD
@@ -68,145 +114,187 @@ flowchart TD
     ActiveState --> AbandonedState["Abandoned State"]
 ```
 
-## Individual State Flowcharts
+### State Transitions
 
-### Planned State Flowchart
+**Planned → Active:**
+1. Claim session via `.agents/sessions.lock`
+2. Move to `sessions/active/{agent-id}/`
+3. Create session branch: `session/{agent-id}/{session-slug}`
+4. Begin work
 
-```mermaid
-flowchart TD
-    CreatePlanned["Create in planned/"] --> ResearchLoop["Research & Planning Loop"]
-    subgraph ResearchLoop
-        CheckKnowledge{"New Knowledge?"}
-        CheckKnowledge -->|Yes| UpdateKnowledge["Update Knowledge Base"]
-        UpdateKnowledge --> CommitKnowledge["Commit Knowledge Base"]
-        CommitKnowledge --> CreateKnowledgePR["Create Knowledge PR to main"]
-        CreateKnowledgePR --> MergeKnowledgePR["Merge Knowledge PR to main"]
-        MergeKnowledgePR
-    end
-    ResearchLoop --> MoveActive["Move to active/"]
-```
+**Active → Completed:**
+1. Finalize documentation (worklog, active-plan)
+2. Generate patch file
+3. **Check for KB learnings** → create KB merge session if exists
+4. Move to `sessions/completed/`
+5. Squash merge to main
+6. Delete session branch
 
-### Active State Flowchart
+See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#detailed-state-flowcharts) for detailed flowcharts.
 
-```mermaid
-flowchart TD
-    
-    subgraph SessionOrchestration["Session Orchestration"]
-        MoveActive["Move to Active State"] --> CreateFiles["Create Session Files"]
-        CreateSessionBranch["Commit Main & Create Session Branch"]
+## Knowledge Base Management
 
-        subgraph SubsessionOrchestration["Subsession Orchestration"]
-            FilterRequirements["Filter Requirements"] --> IdentifyAcceptanceCriteria["Identify Acceptance Criteria"] --> CreateSubsession["Create Sub-session"]
-            CheckSubsessionComplete["Check Sub-session Complete?"]
+### Two-Phase Strategy
 
+**Phase 1: Session-Scoped Capture (During Work)**
+- Write to: `_AGENTS/knowledge/sessions/{session-slug}/learnings.md`
+- Isolated per session, zero conflicts
+- Fast, autonomous documentation
 
-            subgraph UpdatePlan["Update Plan Flow"]
-                IdeateStrategies["Ideate Strategies"] --> SelectStrategy["Select Strategy"] --> CreateImplementationPlan["Create Implementation Plan"] --> ReviseImplementationPlan["Revise Implementation Plan"] --> planUpdateWorklog["Update Worklog from Plan"]
-                CheckImplementationPlanComplete["Check Implementation Plan Complete?"]
-            end
-            
-            subgraph TDD["TDD Flow"]
-                Red["Red (Write Failing Test)"] --> Green["Green (Make Test Pass)"] --> tddGreenUpdateWorklog["Update Worklog from Green"]
-                tddGreenUpdateWorklog --> NeedsRefactor["Needs Refactor?"] -->|Refactor| ReviseImplementationPlan 
-                NeedsRefactor -->|Complete| CheckImplementationPlanComplete
-            end 
-                
+**Phase 2: Canonical Merge (Dedicated Session)**
+- KB merge session auto-created at completion
+- Any agent can execute merge
+- Deliberate review and quality control
+- Merge to: `_AGENTS/knowledge/shared/`
 
+### KB Access Rules
 
-            subgraph CheckSubsessionComplete["Check Sub-session Complete?"]
-                ReviewWorklog["Review Worklog"] --> ReviewAcceptanceCriteria["Review Acceptance Criteria"] --> ReviewRequirements["Review Requirements"]
-            end
-        end
+| Action | Path | When | Who |
+|--------|------|------|-----|
+| **Read KB** | `knowledge/shared/` | Anytime | All agents |
+| **Write Learnings** | `knowledge/sessions/{session}/` | During work | Owning agent |
+| **Merge to Canonical** | `knowledge/shared/` | KB merge session only | Assigned agent |
 
-    end
-    
-    CreateFiles --> CreateSessionBranch
-    CreateSessionBranch --> FilterRequirements
-    
-    CreateSubsession --> IdeateStrategies
-    planUpdateWorklog --> Red
+**Critical:** Never write directly to `knowledge/shared/` during regular sessions. Always use KB merge sessions.
 
-    CheckImplementationPlanComplete -->|"Continue"| IdeateStrategies
-    CheckImplementationPlanComplete -->|"Complete"| CheckSubsessionComplete
-    
-    CheckSubsessionComplete -->|"Continue"| CreateSubsession
-    CheckSubsessionComplete -->|"Complete"| CompleteState["Complete State"]
-    CheckSubsessionComplete -->|"Abandon"| AbandonedState["Abandoned State"]
-```
+## Trunk-Based Development
 
-### Completed State Flowchart
+### Branch Strategy
 
-```mermaid
-flowchart TD
-    Finalize["Finalize Documentation"] --> GeneratePatch["Generate patch file"]
-    GeneratePatch --> MoveCompleted["Move to completed/"]
-    MoveCompleted --> MergeSessionBranch["Merge session branch to main"]
-    MergeSessionBranch --> DeleteSessionBranch["Delete session branch"]
-    DeleteSessionBranch --> End["Session Complete"]
-```
-
-### Abandoned State Flowchart
-
-```mermaid
-flowchart TD
-    DocumentAbandon["Document Abandonment"] --> MoveAbandoned["Move to abandoned/"]
-    MoveAbandoned --> MergeSessionBranch["Merge session branch to main"]
-    MergeSessionBranch --> DeleteSessionBranch["Delete session branch"]
-    DeleteSessionBranch --> End["Session Complete"]
-```
-
-## Trunk-Based Development Integration
-
-### Session Branch Strategy
-- **Session Branch**: Each session gets its own branch (`session/YYYY-MM-DD-descriptive-slug`)
-- **Sub-sessions**: Break down epic-level sessions into smaller, mergeable sub-sessions
-- **Frequent Merges**: Sub-sessions are merged to main frequently (daily or per sub-session)
-- **Session Branch**: Remains for the entire session duration, can be used for patches
-
-### Sub-session Workflow
-1. **Work on sub-session** in session branch
-2. **Commit code changes** (`git add src/ && git commit`)
-3. **Check if tests pass** (custom tests as needed)
-4. **Update session files** and commit (`git add sessions/ && git commit`)
-5. **Update knowledge base** and commit (`git add _AGENTS/knowledge/ && git commit`)
-6. **Create PR** from session branch to main ONLY IF THERE IS AN UPSTREAM REMOTE
-7. **Squash merge PR** to main (trunk-based) - keeps main history clean
-8. **Continue** with next sub-session
-
-### Session Completion
-- **Final merge**: Session branch squash merged to main
-- **Cleanup**: Session branch can be deleted or kept for reference
-- **Documentation**: Session files moved to completed/
+- Each session gets agent-namespaced branch
+- Frequent merges to main (per sub-session or daily)
+- Squash merge for clean history
+- Session branch deleted after completion
 
 ### Commit Strategy
-- **Code Changes**: `git add src/ && git commit -m "feat: implement feature"`
-- **Session Files**: `git add sessions/ && git commit -m "docs: update session worklog"`
-- **Knowledge Base**: `git add _AGENTS/knowledge/ && git commit -m "docs: add patterns"`
-- **Avoid**: `git add .` - be specific about what you're committing
 
-### Squash Merge Benefits
-- **Clean History**: Main branch shows logical units of work, not individual commits
-- **Session Isolation**: Each session appears as a single commit on main
-- **Easy Rollback**: Can revert entire sessions if needed
-- **Clear Attribution**: Session identifier in commit message shows which session
+All commits prefixed with agent ID:
 
-### Branch Naming Convention
-- **Session Branch**: `session/YYYY-MM-DD-descriptive-slug`
-- **Sub-session Commits**: Include sub-session identifier in commit messages
-- **PR Titles**: `[session: YYYY-MM-DD-descriptive-slug] Sub-session description`
+```bash
+# Code changes
+git add src/ && git commit -m "[cursor-1] feat: implement feature"
+
+# Session files
+git add sessions/ && git commit -m "[cursor-1] docs: update worklog"
+
+# KB learnings
+git add _AGENTS/knowledge/sessions/ && git commit -m "[cursor-1] docs: capture learnings"
+
+# KB canonical (only in KB merge sessions)
+git add _AGENTS/knowledge/shared/ && git commit -m "[cursor-1] docs: merge KB learnings"
+```
+
+**Avoid:** `git add .` - be specific about what you're committing.
+
+## Conflict Resolution
+
+### Conflict Types
+
+| Type | Strategy | How It Works |
+|------|----------|--------------|
+| **Session Files** | Namespace isolation | Each agent in `active/{agent-id}/` |
+| **KB Learnings** | Session-scoped | Each session in `sessions/{session-slug}/` |
+| **Canonical KB** | KB merge sessions | Only via dedicated sessions |
+| **Code Files** | Git merge | Standard resolution, document in worklog |
+| **Session Claims** | Optimistic locking | Retry with different session |
+
+See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) for detailed examples.
 
 ## Best Practices
 
-1. **Update frequently** - don't let documentation lag behind work
-2. **Document decisions** - future agents need context
-3. **Be honest** - document failures and lessons learned
-4. **Clean up** - remove temporary files when done
+### General
+1. Update documentation frequently
+2. Document decisions for future agents
+3. Be honest about failures and learnings
+4. Clean up temporary files
+
+### Multi-Agent Specific
+5. **Always pull before claiming** - Get latest state first
+6. **Handle race conditions gracefully** - Pick different session if claim fails
+7. **Namespace everything** - Use `active/{agent-id}/` and `session/{agent-id}/`
+8. **Agent-prefixed commits** - Every commit tagged with `[{agent-id}]`
+9. **KB learnings are session-scoped** - Never write directly to `knowledge/shared/`
+10. **Create KB merge sessions** - Auto-generate at session completion
+11. **Verify agent identity** - Check git config before starting
+12. **Coordinate via git** - No file system locks or external tools
 
 ## Session States
 
 | State | Location | Description |
 |-------|----------|-------------|
-| **Planned** | `planned/` | Future work, research phase |
-| **Active** | `active/` | Currently being worked on |
+| **Planned** | `planned/` | Future work, any agent can claim |
+| **Active** | `active/{agent-id}/` | Being worked on by specific agent |
 | **Completed** | `completed/` | Successfully finished |
 | **Abandoned** | `abandoned/` | Cancelled or incomplete |
+
+## Quick Start
+
+### Starting a Session
+
+```bash
+# 1. Setup identity (once per worktree)
+git config user.name "Cursor-Local-1 (via cristos)"
+git config user.email "cristos+cursor-1@agents.local"
+
+# 2. Claim session
+git pull origin main
+echo "cursor-1:2025-10-14-feature-x:$(date +%s)" >> .agents/sessions.lock
+git add .agents/sessions.lock
+git commit -m "[cursor-1] Claim session 2025-10-14-feature-x"
+git push origin main  # If fails, pick different session
+
+# 3. Move to active and create branch
+mv sessions/planned/2025-10-14-feature-x sessions/active/cursor-1/
+git checkout -b session/cursor-1/2025-10-14-feature-x
+
+# 4. Start work!
+```
+
+### Completing a Session
+
+```bash
+# 1. Finalize documentation (worklog, active-plan, generate patch)
+
+# 2. Check for KB learnings and create KB merge session if exists
+if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
+  # Create KB merge session in planned/
+  # [Use KB merge session template]
+fi
+
+# 3. Move to completed
+mv sessions/active/cursor-1/2025-10-14-feature-x sessions/completed/
+git add sessions/ && git commit -m "[cursor-1] Complete session"
+
+# 4. Merge to main
+git checkout main
+git pull origin main
+git merge --squash session/cursor-1/2025-10-14-feature-x
+git commit -m "[cursor-1] Session complete: 2025-10-14-feature-x"
+git push origin main
+
+# 5. Cleanup
+git branch -d session/cursor-1/2025-10-14-feature-x
+```
+
+See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete examples.
+
+## Summary
+
+This multi-agent protocol enables autonomous, distributed collaboration through:
+
+1. **Git-Based Coordination** - No orchestrator, git provides atomic operations
+2. **Namespace Isolation** - Separate paths/branches minimize conflicts
+3. **Two-Phase Knowledge** - Fast capture, deliberate merge
+4. **Full Traceability** - Every commit attributed to specific agent
+5. **Optimistic Locking** - Session claims via git push races
+6. **Worktree Isolation** - Each agent has own working directory
+7. **Quality Control** - KB merges are reviewable sessions
+
+**Key Principle:** Use git itself as the distributed coordination system.
+
+---
+
+**📚 Next Steps:**
+- See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md) for detailed examples, git commands, and troubleshooting
+- Review existing sessions in `planned/` to claim work
+- Set up your agent identity and worktree
