@@ -1,26 +1,26 @@
 # Sessions Protocol Reference
 
-This document contains detailed examples, git commands, troubleshooting guides, and edge case handling for the multi-agent session protocol.
+This document provides detailed implementation guidance, examples, and troubleshooting for the multi-agent session protocol.
 
 > **📖 For essential protocol overview:** See [SESSIONS-README.md](SESSIONS-README.md)
 
 ## Table of Contents
 
 - [Utility Scripts](#utility-scripts)
+- [Session Templates](#session-templates)
+- [Detailed Implementation Examples](#detailed-implementation-examples)
 - [Git Worktrees Setup](#git-worktrees-setup)
-- [Agent Registry](#agent-registry)
-- [Session Claim and Activation](#session-claim-and-activation)
-- [Detailed State Flowcharts](#detailed-state-flowcharts)
-- [KB Merge Session Template](#kb-merge-session-template)
+- [Agent Registry & Session Lock](#agent-registry--session-lock)
+- [State Flowcharts](#state-flowcharts)
 - [Conflict Resolution Examples](#conflict-resolution-examples)
-- [Traceability & Auditing](#traceability--auditing)
-- [Directory Structure Example](#directory-structure-example)
+- [Troubleshooting](#troubleshooting)
+- [Audit & Traceability](#audit--traceability)
 
 ---
 
 ## Utility Scripts
 
-The `_bin/` directory contains executable scripts for common session operations:
+The `_bin/` directory contains executable scripts for common session operations.
 
 ### claim-session
 
@@ -28,26 +28,29 @@ Claims and activates a session atomically.
 
 **Usage:**
 ```bash
-./_bin/claim-session <agent-id> <session-slug>
+./_bin/claim-session <session-slug>
 ```
 
 **Example:**
 ```bash
-./_bin/claim-session cursor-1 2025-10-14-auth-system
-
-# Then activate:
-cd sessions/active/2025-10-14-auth-system
-source .session-env
+./_bin/claim-session 2025-10-14-auth-system
 ```
 
 **What it does:**
 1. Pulls latest git state
-2. Checks session availability
+2. Checks session availability in `.agents/sessions.lock`
 3. Claims session atomically via git push
-4. Moves session to `active/`
-5. Creates `.session-env` file
-6. Creates session branch
+4. Moves session from `planned/` to `active/`
+5. Creates `.session-env` file with session identity
+6. Creates session branch `session/{session-slug}`
 7. Provides activation instructions
+
+**Environment Variables Set:**
+- `GIT_AUTHOR_NAME` - Agent-specific git author
+- `GIT_AUTHOR_EMAIL` - Agent-specific git email
+- `SESSION_SLUG` - Session identifier
+- `SESSION_BRANCH` - Session branch name
+- `PS1` - Updated shell prompt
 
 ### complete-session
 
@@ -55,41 +58,206 @@ Completes a session and merges to main.
 
 **Usage:**
 ```bash
-./_bin/complete-session <agent-id> <session-slug>
+./_bin/complete-session <session-slug>
 ```
 
 **Example:**
 ```bash
-# From repo root
-./_bin/complete-session cursor-1 2025-10-14-auth-system
+./_bin/complete-session 2025-10-14-auth-system
 ```
 
 **What it does:**
-1. Generates patch file
-2. Creates KB merge session if learnings exist
-3. Moves session to `completed/`
-4. Merges to main via squash merge
+1. Generates patch file in session directory
+2. Checks for KB learnings and creates KB merge session if found
+3. Moves session from `active/` to `completed/`
+4. Merges session branch to main via squash merge
 5. Deletes session branch
-6. Reminds you to deactivate environment
+6. Reminds to deactivate environment variables
+
+**KB Merge Session Creation:**
+- Automatically creates `kb-{date}-merge-{topic}` session if learnings exist
+- Uses template from `_templates/kb-merge-SESSION.md`
+- Places in `sessions/planned/` for any session to claim
 
 ---
 
-## Git Worktrees Setup (Optional)
+## Session Templates
 
-Worktrees are **optional infrastructure** for running multiple sessions concurrently. They're not required for the protocol to work.
+The `_templates/` directory contains templates for session files.
 
-### Recommended Structure
+### kb-merge-SESSION.md
 
-Keep worktrees organized in a subdirectory to avoid clutter:
+Template for KB merge sessions created automatically when completing sessions with learnings.
+
+**Template Variables:**
+- `{{TOPIC}}` - Extracted from learnings file first heading
+- `{{SOURCE_SESSION}}` - Original session slug
+- `{{AGENT_ID}}` - Agent that completed source session
+- `{{TIMESTAMP}}` - Completion timestamp
+
+**Usage:**
+```bash
+# Automatically used by complete-session script
+# Manual creation if needed:
+sed -e "s/{{SOURCE_SESSION}}/2025-10-14-auth-system/g" \
+    -e "s/{{AGENT_ID}}/cursor-1/g" \
+    -e "s/{{TOPIC}}/auth-patterns/g" \
+    "_templates/kb-merge-SESSION.md" > "sessions/planned/kb-2025-10-14-merge-auth-patterns/SESSION.md"
+```
+
+### session-env.template
+
+Template for session environment files.
+
+**Template Variables:**
+- `{{AGENT_ID}}` - Agent identifier
+- `{{SESSION_SLUG}}` - Session identifier
+- `{{USER_NAME}}` - Git user name
+- `{{USER_EMAIL}}` - Git user email
+
+**Usage:**
+```bash
+# Automatically used by claim-session script
+# Manual creation if needed:
+sed -e "s/{{AGENT_ID}}/cursor-1/g" \
+    -e "s/{{SESSION_SLUG}}/2025-10-14-auth-system/g" \
+    -e "s/{{USER_NAME}}/$(git config user.name)/g" \
+    -e "s/{{USER_EMAIL}}/$(git config user.email)/g" \
+    "_templates/session-env.template" > "sessions/active/2025-10-14-auth-system/.session-env"
+```
+
+---
+
+## Detailed Implementation Examples
+
+### Complete Session Workflow
+
+#### Starting a Session
 
 ```bash
-# Main repo
-cd /path/to/repo
+# 1. Claim and activate session
+./_bin/claim-session 2025-10-14-auth-system
 
-# Create worktrees directory
+# 2. Activate session environment
+cd sessions/active/2025-10-14-auth-system
+source .session-env
+
+# 3. Verify activation
+echo $GIT_AUTHOR_NAME  # Should show: Agent-cursor-1 (via username)
+echo $SESSION_SLUG    # Should show: 2025-10-14-auth-system
+```
+
+#### Working on a Session
+
+```bash
+# Make code changes
+git add src/auth.js
+git commit -m "[2025-10-14-auth-system] feat: add JWT validation"
+
+# Update session documentation
+echo "## [2025-10-14 15:30] Implemented JWT validation" >> worklog.md
+git add worklog.md
+git commit -m "[2025-10-14-auth-system] docs: update worklog"
+
+# Capture learnings
+mkdir -p _AGENTS/knowledge/sessions/2025-10-14-auth-system
+cat > _AGENTS/knowledge/sessions/2025-10-14-auth-system/learnings.md << 'EOF'
+# JWT Authentication Patterns
+
+## Key Insights
+- JWT tokens should be validated on every request
+- Refresh tokens should have longer expiration than access tokens
+
+## Patterns Discovered
+- Use middleware for token validation
+- Store user context in request object
+
+## Gotchas & Edge Cases
+- Clock skew can cause token validation failures
+- Always validate token signature before claims
+EOF
+
+git add _AGENTS/knowledge/sessions/
+git commit -m "[2025-10-14-auth-system] docs: capture learnings"
+```
+
+#### Completing a Session
+
+```bash
+# 1. Complete session (from repo root)
+cd ../../..  # Back to repo root
+./_bin/complete-session 2025-10-14-auth-system
+
+# 2. Deactivate environment
+unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+unset SESSION_SLUG SESSION_BRANCH PS1
+```
+
+### Manual Session Management
+
+#### Manual Claim Process
+
+```bash
+# 1. Pull latest state
+git pull origin main
+
+# 2. Check available sessions
+ls sessions/planned/
+
+# 3. Check current claims
+cat .agents/sessions.lock
+
+# 4. Claim session atomically
+echo "2025-10-14-auth-system:$(date +%s)" >> .agents/sessions.lock
+git add .agents/sessions.lock
+git commit -m "[2025-10-14-auth-system] Claim session"
+
+# 5. Push (atomic operation)
+if git push origin main; then
+  echo "✅ Session claimed"
+  mv sessions/planned/2025-10-14-auth-system sessions/active/
+  # Create .session-env and session branch...
+else
+  echo "❌ Claim failed - another agent got it first"
+  git reset --hard HEAD~1
+fi
+```
+
+#### Manual Completion Process
+
+```bash
+# 1. Generate patch
+cd sessions/active/2025-10-14-auth-system
+git format-patch main --stdout > 2025-10-14-auth-system.patch
+
+# 2. Move to completed
+cd ../../..
+mv sessions/active/2025-10-14-auth-system sessions/completed/
+
+# 3. Merge to main
+git checkout main
+git pull origin main
+git merge --squash session/2025-10-14-auth-system
+git commit -m "[cursor-1] Session complete: 2025-10-14-auth-system"
+git push origin main
+
+# 4. Cleanup
+git branch -d session/2025-10-14-auth-system
+```
+
+---
+
+## Git Worktrees Setup
+
+Worktrees enable running multiple sessions concurrently by providing isolated working directories.
+
+### Setup Worktrees
+
+```bash
+# Create worktrees directory (outside main repo)
 mkdir -p ../repo-worktrees
 
-# Create worktrees in organized location
+# Create worktrees for agents
 git worktree add ../repo-worktrees/agent-1 main
 git worktree add ../repo-worktrees/agent-2 main
 git worktree add ../repo-worktrees/agent-3 main
@@ -102,9 +270,25 @@ git worktree add ../repo-worktrees/agent-3 main
 #   └── agent-3/
 ```
 
-### Worktree Cleanup
+### Using Worktrees
 
-When a session completes, optionally remove the worktree if no longer needed:
+```bash
+# Agent 1 works in worktree
+cd ../repo-worktrees/agent-1
+./_bin/claim-session 2025-10-14-auth-system
+cd sessions/active/2025-10-14-auth-system
+source .session-env
+# Work on session...
+
+# Agent 2 works in different worktree
+cd ../repo-worktrees/agent-2
+./_bin/claim-session claude-a 2025-10-14-api-work
+cd sessions/active/2025-10-14-api-work
+source .session-env
+# Work on session...
+```
+
+### Cleanup Worktrees
 
 ```bash
 # After session completion
@@ -119,31 +303,49 @@ git worktree prune
 - Isolated working directories (no file conflicts)
 - Can run multiple sessions concurrently
 - All see same git history
-- Clean organization (not scattered in parent dir)
 
 **Limitations:**
 - Can't checkout same branch in multiple worktrees
 - Must use unique branch names per session
 
-**Alternative:** Work sequentially in main repo (one session at a time)
-
 ---
 
-## Agent Registry
+## Agent Registry & Session Lock
 
-### Registry Structure
+### Session Lock File
 
+Location: `.agents/sessions.lock`
+
+**Format:**
 ```
-.agents/
-├── sessions.lock        # Session claims (format: agent-id:session-slug:timestamp)
-└── agents/
-    ├── cursor-1.json    # Agent status and metadata
-    ├── claude-a.json
-    └── agent-3.json
+session-id:unix-timestamp
 ```
 
-### Agent Status File Example
+**Example:**
+```
+2025-10-14-auth-system:1697283000
+2025-10-14-api-work:1697283100
+kb-2025-10-14-merge-auth-patterns:1697284000
+```
 
+**Usage:**
+```bash
+# Check current claims
+cat .agents/sessions.lock
+
+# Check if specific session is claimed
+grep "2025-10-14-auth-system" .agents/sessions.lock
+
+# Clean up stale claims
+grep -v "old-session" .agents/sessions.lock > temp
+mv temp .agents/sessions.lock
+```
+
+### Agent Registry (Optional)
+
+Location: `.agents/agents/`
+
+**Agent Status File Example:**
 ```json
 {
   "id": "cursor-1",
@@ -151,389 +353,105 @@ git worktree prune
   "started": "2025-10-14T10:30:00Z",
   "status": "active",
   "current_session": "2025-10-14-auth-system",
-  "worktree": "/path/to/repo-cursor-1"
+  "worktree": "/path/to/repo-worktrees/agent-1"
 }
 ```
 
-### Session Lock File Format
-
-```
-cursor-1:2025-10-14-auth-system:1697283000
-claude-a:2025-10-14-api-work:1697283100
-cursor-1:kb-2025-10-14-merge-auth-patterns:1697284000
-```
-
-Each line: `{agent-id}:{session-slug}:{unix-timestamp}`
-
 ---
 
-## Session Claim and Activation
+## State Flowcharts
 
-### Complete Implementation
+### Session State Flow
 
-```bash
-#!/bin/bash
-# Session claim script
-
-AGENT_ID="cursor-1"
-SESSION_SLUG="2025-10-14-auth-system"
-
-# Step 1: Pull latest state
-echo "Pulling latest state..."
-git pull --rebase origin main
-
-# Step 2: Check if session already claimed
-if grep -q "$SESSION_SLUG" .agents/sessions.lock; then
-  echo "❌ Session already claimed by another agent"
-  echo "Available sessions:"
-  ls sessions/planned/
-  exit 1
-fi
-
-# Step 3: Check if session exists
-if [ ! -d "sessions/planned/$SESSION_SLUG" ]; then
-  echo "❌ Session does not exist in planned/"
-  exit 1
-fi
-
-# Step 4: Claim session atomically
-TIMESTAMP=$(date +%s)
-echo "$AGENT_ID:$SESSION_SLUG:$TIMESTAMP" >> .agents/sessions.lock
-git add .agents/sessions.lock
-git commit -m "[$AGENT_ID] Claim session $SESSION_SLUG"
-
-# Step 5: Push (atomic operation)
-if git push origin main; then
-  echo "✅ Session claimed successfully"
-  
-  # Step 6: Move session to active
-  mv sessions/planned/$SESSION_SLUG sessions/active/
-  
-  # Step 7: Create session activation file
-  cat > sessions/active/$SESSION_SLUG/.session-env << EOF
-export GIT_AUTHOR_NAME="Agent-$AGENT_ID (via $(git config user.name))"
-export GIT_AUTHOR_EMAIL="$(git config user.email)+$AGENT_ID@agents.local"
-export GIT_COMMITTER_NAME="Agent-$AGENT_ID (via $(git config user.name))"
-export GIT_COMMITTER_EMAIL="$(git config user.email)+$AGENT_ID@agents.local"
-export SESSION_AGENT="$AGENT_ID"
-export SESSION_SLUG="$SESSION_SLUG"
-export SESSION_BRANCH="session/$AGENT_ID/$SESSION_SLUG"
-export PS1="($AGENT_ID:$SESSION_SLUG) \w $ "
-echo "✅ Session active: $SESSION_AGENT/$SESSION_SLUG"
-EOF
-  
-  git add sessions/
-  git commit -m "[$AGENT_ID] Move session to active and create activation"
-  
-  # Step 8: Create session branch and activate
-  git checkout -b session/$AGENT_ID/$SESSION_SLUG
-  cd sessions/active/$SESSION_SLUG
-  source .session-env
-  
-  # Session is now active with proper git identity
-else
-  echo "❌ Push failed - another agent claimed session first"
-  echo "Rolling back..."
-  git reset --hard HEAD~1
-  echo "Try claiming a different session"
-  exit 1
-fi
+```mermaid
+flowchart LR
+    Drafting["drafting/
+    (being defined)"] -->|"Ready"| Planned["planned/
+    (ready to claim)"]
+    Planned -->|"Claim"| Active["active/
+    (in progress)"]
+    Active -->|"Complete"| Completed["completed/
+    (merged)"]
+    Active -->|"Cancel"| Abandoned["abandoned/
+    (documented)"]
 ```
 
-### Handling Race Conditions
-
-```bash
-# Manual recovery if claim push fails
-
-# 1. Pull to get latest state
-git pull --rebase origin main
-
-# 2. Check what sessions are now claimed
-cat .agents/sessions.lock
-
-# 3. Clean up your failed claim attempt
-grep -v "cursor-1:2025-10-14-auth" .agents/sessions.lock > temp
-mv temp .agents/sessions.lock
-
-# 4. Try claiming a different session
-echo "cursor-1:2025-10-14-api-work:$(date +%s)" >> .agents/sessions.lock
-git add .agents/sessions.lock
-git commit -m "[cursor-1] Claim api-work session"
-git push origin main
-```
-
----
-
-## Detailed State Flowcharts
-
-### Planned State Flowchart
+### Active Session Workflow
 
 ```mermaid
 flowchart TD
-    CreatePlanned["Create in planned/"] --> ResearchLoop["Research & Planning Loop"]
-    subgraph ResearchLoop["Research Loop"]
-        CheckKnowledge{"New Knowledge?"}
-        CheckKnowledge -->|"Yes"| UpdateKnowledge["Update Knowledge Base"]
-        UpdateKnowledge --> CommitKnowledge["Commit Knowledge Base"]
-        CommitKnowledge --> CreateKnowledgePR["Create Knowledge PR to main"]
-        CreateKnowledgePR --> MergeKnowledgePR["Merge Knowledge PR to main"]
-        MergeKnowledgePR
-    end
-    ResearchLoop --> MoveActive["Move to active/"]
+    Start["Session Active"] --> Work["Work on Tasks"]
+    Work --> Update["Update Documentation"]
+    Update --> Learn["Capture Learnings"]
+    Learn --> Check{"Session Complete?"}
+    Check -->|"No"| Work
+    Check -->|"Yes"| Complete["Complete Session"]
+    Complete --> Merge["Merge to Main"]
+    Merge --> Cleanup["Cleanup Branch"]
 ```
 
-### Active State Flowchart
+### KB Merge Workflow
 
 ```mermaid
 flowchart TD
-    
-    subgraph SessionOrchestration["Session Orchestration"]
-        MoveActive["Move to Active State"] --> CreateFiles["Create Session Files"]
-        CreateSessionBranch["Commit Main & Create Session Branch"]
-
-        subgraph SubsessionOrchestration["Subsession Orchestration"]
-            FilterRequirements["Filter Requirements"] --> IdentifyAcceptanceCriteria["Identify Acceptance Criteria"] --> CreateSubsession["Create Sub-session"]
-            CheckSubsessionComplete["Check Sub-session Complete?"]
-
-
-            subgraph UpdatePlan["Update Plan Flow"]
-                IdeateStrategies["Ideate Strategies"] --> SelectStrategy["Select Strategy"] --> CreateImplementationPlan["Create Implementation Plan"] --> ReviseImplementationPlan["Revise Implementation Plan"] --> planUpdateWorklog["Update Worklog from Plan"]
-                CheckImplementationPlanComplete["Check Implementation Plan Complete?"]
-            end
-            
-            subgraph TDD["TDD Flow"]
-                Red["Red (Write Failing Test)"] --> Green["Green (Make Test Pass)"] --> tddGreenUpdateWorklog["Update Worklog from Green"]
-                tddGreenUpdateWorklog --> NeedsRefactor["Needs Refactor?"] -->|"Refactor"| ReviseImplementationPlan 
-                NeedsRefactor -->|"Complete"| CheckImplementationPlanComplete
-            end 
-                
-
-
-            subgraph CheckSubsessionComplete["Check Sub-session Complete?"]
-                ReviewWorklog["Review Worklog"] --> ReviewAcceptanceCriteria["Review Acceptance Criteria"] --> ReviewRequirements["Review Requirements"]
-            end
-        end
-
-    end
-    
-    CreateFiles --> CreateSessionBranch
-    CreateSessionBranch --> FilterRequirements
-    
-    CreateSubsession --> IdeateStrategies
-    planUpdateWorklog --> Red
-
-    CheckImplementationPlanComplete -->|"Continue"| IdeateStrategies
-    CheckImplementationPlanComplete -->|"Complete"| CheckSubsessionComplete
-    
-    CheckSubsessionComplete -->|"Continue"| CreateSubsession
-    CheckSubsessionComplete -->|"Complete"| CompleteState["Complete State"]
-    CheckSubsessionComplete -->|"Abandon"| AbandonedState["Abandoned State"]
-```
-
-### Completed State Flowchart
-
-```mermaid
-flowchart TD
-    Finalize["Finalize Documentation"] --> GeneratePatch["Generate patch file"]
-    GeneratePatch --> CheckKBLearnings{"Has KB Learnings?"}
-    
-    CheckKBLearnings -->|"Yes"| CreateKBSession["Create KB Merge Session"]
-    CreateKBSession --> PlaceInPlanned["Place in sessions/planned/"]
-    PlaceInPlanned --> MoveCompleted["Move to completed/"]
-    
-    CheckKBLearnings -->|"No"| MoveCompleted
-    
-    MoveCompleted --> MergeSessionBranch["Merge session branch to main"]
-    MergeSessionBranch --> DeleteSessionBranch["Delete session branch"]
-    DeleteSessionBranch --> End["Session Complete"]
-```
-
-### Abandoned State Flowchart
-
-```mermaid
-flowchart TD
-    DocumentAbandon["Document Abandonment"] --> MoveAbandoned["Move to abandoned/"]
-    MoveAbandoned --> MergeSessionBranch["Merge session branch to main"]
-    MergeSessionBranch --> DeleteSessionBranch["Delete session branch"]
-    DeleteSessionBranch --> End["Session Complete"]
-```
-
----
-
-## KB Merge Session Template
-
-Auto-generated template when completing sessions with learnings:
-
-```markdown
-# KB Merge Session: {Topic}
-
-## Context
-
-This session merges knowledge base learnings from a completed session.
-
-- **Source Session**: 2025-10-14-auth-system
-- **Source Agent**: Cursor-Local-1
-- **Completed**: 2025-10-14T15:30:00Z
-- **Learnings Path**: `_AGENTS/knowledge/sessions/2025-10-14-auth-system/learnings.md`
-
-## Acceptance Criteria
-
-- [ ] Review learnings for quality and accuracy
-- [ ] Identify target location(s) in `knowledge/shared/`
-- [ ] Merge without duplicating existing content
-- [ ] Resolve conflicts with existing KB entries
-- [ ] Update KB structure if needed (add sections, reorganize)
-- [ ] Preserve source learnings file for reference
-- [ ] Document merge decisions in worklog
-- [ ] Update KB index/TOC if exists
-
-## Original Implementation Plan
-
-### Phase 1: Review
-1. Read source learnings from completed session
-2. Read existing KB files that may overlap
-3. Identify conflicts, duplications, and gaps
-
-### Phase 2: Merge Strategy
-1. Determine merge approach:
-   - **Augment**: Add to existing KB section
-   - **Create**: Create new KB section
-   - **Restructure**: Reorganize KB for better flow
-2. Document strategy in worklog
-
-### Phase 3: Execute Merge
-1. Apply changes to `knowledge/shared/`
-2. Test KB coherence:
-   - No broken links
-   - Consistent style and formatting
-   - Logical organization
-3. Update KB index/TOC
-
-### Phase 4: Complete
-1. Commit KB changes to session branch
-2. Create PR to main with clear KB diff
-3. Mark KB session complete
-```
-
-### KB Merge Workflow Example
-
-```bash
-# Agent picks up KB merge session
-cd sessions/active/claude-a/kb-2025-10-14-merge-auth-patterns
-
-# 1. Read source learnings
-cat _AGENTS/knowledge/sessions/2025-10-14-auth-system/learnings.md
-
-# 2. Read existing canonical KB
-cat _AGENTS/knowledge/shared/apis/auth.md
-
-# 3. Determine merge strategy (document in worklog)
-cat >> worklog.md << 'EOF'
-## [2025-10-14 16:00] Merge Strategy
-
-**Source learnings cover:**
-- JWT token validation patterns
-- Session management best practices
-- Security considerations for token refresh
-
-**Existing KB has:**
-- Basic auth concepts
-- OAuth2 flow
-- Missing: JWT specifics
-
-**Strategy:** Augment existing auth.md with new JWT section
-**Location:** knowledge/shared/apis/auth.md (new section at end)
-EOF
-
-# 4. Apply merge
-cat >> _AGENTS/knowledge/shared/apis/auth.md << 'EOF'
-
-## JWT Token Patterns
-
-### Token Validation
-[Content from learnings...]
-
-### Session Management
-[Content from learnings...]
-EOF
-
-# 5. Commit
-git add _AGENTS/knowledge/shared/apis/auth.md
-git add worklog.md
-git commit -m "[claude-a] Merge JWT learnings to canonical KB"
-
-# 6. Complete session (standard completion flow)
+    Learnings["Session Learnings"] --> Check{"KB Learnings Exist?"}
+    Check -->|"Yes"| CreateKB["Create KB Merge Session"]
+    Check -->|"No"| Complete["Complete Session"]
+    CreateKB --> PlacePlanned["Place in planned/"]
+    PlacePlanned --> Complete
+    Complete --> Merge["Merge to Main"]
 ```
 
 ---
 
 ## Conflict Resolution Examples
 
-### Example 1: Session Claim Race Condition
+### Session Claim Race Condition
 
-**Scenario:** Two agents try to claim the same session simultaneously.
+**Scenario:** Two agents try to claim the same session.
 
 ```bash
 # Agent cursor-1 (executes first)
 git pull origin main
-echo "cursor-1:2025-10-14-auth:$(date +%s)" >> .agents/sessions.lock
+echo "2025-10-14-auth:$(date +%s)" >> .agents/sessions.lock
 git add .agents/sessions.lock
-git commit -m "[cursor-1] Claim auth session"
+git commit -m "[2025-10-14-auth] Claim session"
 git push origin main  # ✅ Success
 
 # Agent claude-a (executes second)
 git pull origin main
-echo "claude-a:2025-10-14-auth:$(date +%s)" >> .agents/sessions.lock
+echo "2025-10-14-auth:$(date +%s)" >> .agents/sessions.lock
 git add .agents/sessions.lock
-git commit -m "[claude-a] Claim auth session"
+git commit -m "[2025-10-14-auth] Claim session"
 git push origin main  # ❌ Fails - rejected (non-fast-forward)
 
 # Agent claude-a recovery
-git pull --rebase origin main  # Gets cursor-1's claim
+git pull --rebase origin main  # Gets the claim
 cat .agents/sessions.lock      # See that auth is claimed
-
-# Clean up failed attempt
-git reset --hard origin/main
-
-# Pick different session
-echo "claude-a:2025-10-14-api-work:$(date +%s)" >> .agents/sessions.lock
-git add .agents/sessions.lock
-git commit -m "[claude-a] Claim api-work session"
-git push origin main  # ✅ Success
+git reset --hard origin/main   # Clean up failed attempt
+# Try claiming different session
 ```
 
-### Example 2: Code Conflict During Merge
+### Code Merge Conflict
 
 **Scenario:** Two agents modified the same function.
 
 ```bash
-# Agent cursor-1 merging session to main
+# Merge session to main
 git checkout main
 git pull origin main
-git merge --squash session/cursor-1/2025-10-14-feature-x
+git merge --squash session/2025-10-14-feature-x
 
-# Conflict detected in src/api.js
+# Conflict detected
 Auto-merging src/api.js
 CONFLICT (content): Merge conflict in src/api.js
 
-# View conflict
-cat src/api.js
-<<<<<<< HEAD
-function handleRequest(req) {
-  // claude-a's version (already on main)
-  return validateAndProcess(req);
-}
-=======
-function handleRequest(req) {
-  // cursor-1's version (from session)
-  return processAndValidate(req);
-}
->>>>>>> session/cursor-1/2025-10-14-feature-x
+# Resolve conflict
+# Edit src/api.js to resolve conflicts
+git add src/api.js
+git commit -m "[cursor-1] Resolve merge conflict in handleRequest"
 
-# Resolve: Keep cursor-1's changes (session focus)
-# Edit src/api.js to use processAndValidate
-
-# Document in worklog
+# Document resolution in worklog
 cat >> sessions/active/2025-10-14-feature-x/worklog.md << 'EOF'
 
 ## [2025-10-14 15:30] Merge Conflict Resolution
@@ -542,35 +460,13 @@ cat >> sessions/active/2025-10-14-feature-x/worklog.md << 'EOF'
 **Function**: handleRequest()
 **Conflict**: Both cursor-1 and claude-a modified this function
 **Resolution**: Kept cursor-1's processAndValidate() approach
-**Rationale**: 
-- Session focus was on request processing flow
-- claude-a's validateAndProcess() addressed different concern (validation order)
-- Extracted claude-a's validation logic to separate validator module
-**Follow-up**: Session to refactor validation strategy needed
-
+**Rationale**: Session focus was on request processing flow
 EOF
-
-# Complete merge
-git add src/api.js sessions/
-git commit -m "[cursor-1] Resolve merge conflict in handleRequest"
-git push origin main
 ```
 
-### Example 3: KB Learnings Overlap
+### KB Learnings Overlap
 
-**Scenario:** Two agents learned about the same API independently.
-
-```
-knowledge/sessions/
-├── 2025-10-14-cursor-1-auth/learnings.md
-│   - JWT validation patterns
-│   - Token refresh strategies
-└── 2025-10-14-claude-a-api/learnings.md
-    - JWT security best practices
-    - Token expiration handling
-```
-
-**Resolution:** KB merge sessions handle this:
+**Scenario:** Two agents learned about the same topic.
 
 ```bash
 # First KB merge session (cursor-1's learnings)
@@ -582,7 +478,6 @@ cat _AGENTS/knowledge/shared/apis/auth.md  # See JWT section exists
 cat _AGENTS/knowledge/sessions/2025-10-14-claude-a-api/learnings.md
 
 # Strategy: Augment existing with security section
-# Document in worklog
 cat >> worklog.md << 'EOF'
 ## Merge Strategy
 
@@ -600,348 +495,9 @@ EOF
 
 ---
 
-## Traceability & Auditing
-
-### Agent Attribution Queries
-
-```bash
-# View all commits by specific agent
-git log --author="Cursor-Local-1" --oneline
-git log --author="Claude-Cloud-A" --oneline
-
-# See agent activity summary (commit count)
-git shortlog -sn --author="Agent"
-
-# Find who last modified a file
-git blame src/api.js
-
-# View agent's work on specific file
-git log --author="cursor-1" --oneline -- src/auth.js
-
-# See all sessions completed by agent
-git log --author="Claude-Cloud-A" --grep="Session complete" --oneline
-
-# Find all KB merges by agent
-git log --author="cursor-1" --grep="KB merge" --oneline
-
-# View commits in date range
-git log --author="Cursor-Local-1" --since="2025-10-01" --until="2025-10-14"
-
-# See what agent changed in specific commit
-git show <commit-hash> --stat
-```
-
-### Rollback Strategies
-
-```bash
-# Revert entire session (find merge commit first)
-git log --oneline --grep="2025-10-14-auth-system"
-# Output: abc1234 [cursor-1] Session complete: 2025-10-14-auth-system
-git revert abc1234
-
-# Revert all changes by specific agent to a file
-git log --author="Cursor-Local-1" --format="%H" -- src/api.js | xargs -I {} git revert {}
-
-# Undo agent's last N commits (use with caution - may affect other work)
-git log --author="claude-a" -n 5 --format="%H" | xargs -I {} git revert {}
-
-# Cherry-pick good commits from abandoned session
-git log session/cursor-1/2025-10-14-abandoned --oneline
-# Pick specific commits
-git cherry-pick <commit-hash>
-
-# Undo specific file changes from session
-git checkout origin/main -- src/problem-file.js
-git commit -m "[manual] Revert problem-file.js from session"
-
-# View what would be reverted (dry run)
-git revert --no-commit abc1234
-git status  # See what would change
-git reset --hard  # Abort dry run
-```
-
-### Audit Reports
-
-```bash
-# Agent productivity report (commits per agent)
-git log --all --format="%aN" | sort | uniq -c | sort -rn
-# Output:
-#   45 Cursor-Local-1 (via cristos)
-#   32 Claude-Cloud-A (via cristos)
-#   18 Copilot-WSL-1 (via cristos)
-
-# Session completion rate by agent
-git log --all --grep="Session complete" --format="%aN" | sort | uniq -c
-# Output:
-#   12 Cursor-Local-1 (via cristos)
-#    8 Claude-Cloud-A (via cristos)
-
-# KB contributions by agent
-git log --all --grep="KB merge" --format="%aN" | sort | uniq -c
-
-# Files most frequently modified by agent
-git log --author="cursor-1" --name-only --format="" | sort | uniq -c | sort -rn
-# Output:
-#   15 src/api.js
-#   12 src/auth.js
-#    8 src/utils.js
-
-# Agent's most active days
-git log --author="Claude-Cloud-A" --format="%ad" --date=short | sort | uniq -c | sort -rn
-# Output:
-#   12 2025-10-14
-#    8 2025-10-13
-#    5 2025-10-12
-
-# Lines added/removed by agent
-git log --author="cursor-1" --numstat --format="" | awk '{added+=$1; removed+=$2} END {print "Added:", added, "Removed:", removed}'
-
-# Agent collaboration matrix (files both touched)
-comm -12 \
-  <(git log --author="cursor-1" --name-only --format="" | sort | uniq) \
-  <(git log --author="claude-a" --name-only --format="" | sort | uniq)
-```
-
----
-
-## Directory Structure Example
-
-Complete repository layout with multi-agent support:
-
-```
-/repo/
-├── .agents/
-│   ├── sessions.lock           # Session claims
-│   │   # Format: agent-id:session-slug:timestamp
-│   │   # cursor-1:2025-10-14-auth-system:1697283000
-│   │   # claude-a:2025-10-14-api-work:1697283100
-│   │
-│   └── agents/
-│       ├── cursor-1.json       # Agent status
-│       ├── claude-a.json
-│       └── agent-3.json
-│
-├── _AGENTS/
-│   ├── knowledge/
-│   │   ├── shared/             # Canonical KB (main branch only)
-│   │   │   ├── apis/
-│   │   │   │   ├── auth.md
-│   │   │   │   └── payments.md
-│   │   │   ├── patterns/
-│   │   │   │   ├── error-handling.md
-│   │   │   │   └── state-management.md
-│   │   │   ├── systems/
-│   │   │   │   └── architecture.md
-│   │   │   └── index.md
-│   │   │
-│   │   └── sessions/           # Session-scoped learnings
-│   │       ├── 2025-10-14-auth-system/
-│   │       │   └── learnings.md
-│   │       ├── 2025-10-14-api-work/
-│   │       │   └── learnings.md
-│   │       └── 2025-10-13-initial-setup/
-│   │           └── learnings.md
-│   │
-│   └── sessions/
-│       ├── _bin/               # Utility scripts
-│       │   ├── claim-session
-│       │   └── complete-session
-│       │
-│       ├── _templates/         # Templates
-│       │   ├── kb-merge-SESSION.md
-│       │   └── session-env.template
-│       │
-│       ├── SESSIONS-README.md      # Essential protocol
-│       ├── SESSIONS-REFERENCE.md   # This file
-│       │
-│       ├── abandoned/
-│       │   └── 2025-10-11-failed-approach/
-│       │       ├── SESSION.md
-│       │       └── worklog.md
-│       │
-│       ├── active/             # Active sessions
-│       │   ├── 2025-10-14-auth-system/
-│       │   │   ├── .session-env      # Session activation
-│       │   │   ├── SESSION.md
-│       │   │   ├── worklog.md
-│       │   │   ├── active-plan.md
-│       │   │   └── subsessions.md
-│       │   │
-│       │   └── 2025-10-14-api-work/
-│       │       ├── .session-env      # Session activation
-│       │       ├── SESSION.md
-│       │       ├── worklog.md
-│       │       └── active-plan.md
-│       │
-│       ├── completed/          # Finished and merged
-│       │   ├── 2025-10-13-initial-setup/
-│       │   │   ├── SESSION.md
-│       │   │   ├── worklog.md
-│       │   │   └── 2025-10-13-initial-setup.patch
-│       │   │
-│       │   └── 2025-10-12-database-schema/
-│       │       ├── SESSION.md
-│       │       ├── worklog.md
-│       │       └── 2025-10-12-database-schema.patch
-│       │
-│       ├── drafting/           # Being defined
-│       │   └── 2025-10-17-new-idea/
-│       │       └── SESSION.md (incomplete)
-│       │
-│       └── planned/            # Ready to claim
-│           ├── 2025-10-15-new-feature/
-│           │   └── SESSION.md
-│           ├── kb-2025-10-14-merge-auth-patterns/
-│           │   └── SESSION.md
-│           └── 2025-10-16-refactor-api/
-│               └── SESSION.md
-│
-├── src/                        # Your application code
-│   ├── api.js
-│   ├── auth.js
-│   └── utils.js
-│
-├── tests/
-│   └── ...
-│
-└── README.md
-
-# Worktree layout (if using worktrees)
-/repo/                          # Main repo
-/repo-worktrees/                # Worktrees container
-  ├── agent-1/                  # First agent worktree
-  ├── agent-2/                  # Second agent worktree
-  └── agent-3/                  # Additional agent worktree
-```
-
----
-
-## Quick Reference
-
-### Complete Session Start
-
-```bash
-#!/bin/bash
-# Complete session start script
-
-AGENT_ID="cursor-1"
-SESSION_SLUG="2025-10-14-auth-system"
-USER_NAME=$(git config user.name)
-USER_EMAIL=$(git config user.email)
-
-# Pull latest
-git pull origin main
-
-# Claim session
-echo "$AGENT_ID:$SESSION_SLUG:$(date +%s)" >> .agents/sessions.lock
-git add .agents/sessions.lock
-git commit -m "[$AGENT_ID] Claim session $SESSION_SLUG"
-
-if git push origin main; then
-  # Move to active
-  mv sessions/planned/$SESSION_SLUG sessions/active/
-  
-  # Create session activation file
-  cat > sessions/active/$SESSION_SLUG/.session-env << EOF
-export GIT_AUTHOR_NAME="Agent-$AGENT_ID (via $USER_NAME)"
-export GIT_AUTHOR_EMAIL="$USER_EMAIL+$AGENT_ID@agents.local"
-export GIT_COMMITTER_NAME="Agent-$AGENT_ID (via $USER_NAME)"
-export GIT_COMMITTER_EMAIL="$USER_EMAIL+$AGENT_ID@agents.local"
-export SESSION_AGENT="$AGENT_ID"
-export SESSION_SLUG="$SESSION_SLUG"
-export PS1="($AGENT_ID:$SESSION_SLUG) \w $ "
-echo "✅ Session active: \$SESSION_AGENT/\$SESSION_SLUG"
-EOF
-  
-  git add sessions/
-  git commit -m "[$AGENT_ID] Move session to active and create activation"
-  git push origin main
-  
-  # Create branch and activate
-  git checkout -b session/$AGENT_ID/$SESSION_SLUG
-  cd sessions/active/$SESSION_SLUG
-  source .session-env
-  
-  # Ready to work with session context active
-else
-  echo "❌ Claim failed, rolling back"
-  git reset --hard HEAD~1
-  exit 1
-fi
-```
-
-### Complete Session Completion
-
-```bash
-#!/bin/bash
-# Complete session completion script
-
-AGENT_ID="cursor-1"
-SESSION_SLUG="2025-10-14-auth-system"
-
-# 1. Generate patch
-cd sessions/active/$SESSION_SLUG
-git format-patch main --stdout > $SESSION_SLUG.patch
-
-# 2. Check for KB learnings
-if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
-  # Extract topic from learnings
-  TOPIC=$(head -1 _AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md | sed 's/# //')
-  KB_SESSION="kb-$(date +%Y-%m-%d)-merge-${TOPIC// /-}"
-  
-  # Create KB merge session
-  mkdir -p sessions/planned/$KB_SESSION
-  cat > sessions/planned/$KB_SESSION/SESSION.md << EOF
-# KB Merge Session: $TOPIC
-
-## Context
-- **Source Session**: $SESSION_SLUG
-- **Agent**: $AGENT_ID
-- **Learnings Path**: _AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md
-
-## Acceptance Criteria
-- [ ] Review learnings
-- [ ] Merge to knowledge/shared/
-- [ ] Resolve conflicts
-- [ ] Update KB index
-
-## Original Implementation Plan
-1. Review source learnings and existing KB
-2. Determine merge strategy
-3. Apply changes
-4. Commit and complete
-EOF
-  
-  git add sessions/planned/$KB_SESSION/
-  git commit -m "[$AGENT_ID] Create KB merge session"
-fi
-
-# 3. Move to completed and deactivate
-cd ../../..  # Back to repo root
-mv sessions/active/$SESSION_SLUG sessions/completed/
-git add sessions/
-git commit -m "[$AGENT_ID] Complete session $SESSION_SLUG"
-
-# 4. Merge to main
-git checkout main
-git pull origin main
-git merge --squash session/$AGENT_ID/$SESSION_SLUG
-git commit -m "[$AGENT_ID] Session complete: $SESSION_SLUG"
-git push origin main
-
-# 5. Cleanup and deactivate
-git branch -d session/$AGENT_ID/$SESSION_SLUG
-unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
-unset SESSION_AGENT SESSION_SLUG SESSION_BRANCH PS1
-
-echo "✅ Session complete! Session context deactivated."
-```
-
----
-
 ## Troubleshooting
 
-### Session claim keeps failing
+### Session Claim Keeps Failing
 
 **Problem:** Every time you try to claim a session, push fails.
 
@@ -953,18 +509,18 @@ git pull --rebase origin main
 # Check what's in sessions.lock
 cat .agents/sessions.lock
 
-# If your agent ID appears multiple times
-grep "your-agent-id" .agents/sessions.lock
+# If your session ID appears multiple times
+grep "your-session-id" .agents/sessions.lock
 
 # Clean up stale claims
-grep -v "your-agent-id:old-session" .agents/sessions.lock > temp
+grep -v "your-session-id:old-session" .agents/sessions.lock > temp
 mv temp .agents/sessions.lock
 git add .agents/sessions.lock
-git commit -m "[your-agent-id] Clean up stale claims"
+git commit -m "[your-session-id] Clean up stale claims"
 git push origin main
 ```
 
-### KB learnings not being created
+### KB Learnings Not Being Created
 
 **Problem:** Working on session but no learnings file.
 
@@ -986,10 +542,32 @@ cat > _AGENTS/knowledge/sessions/$(basename $(pwd))/learnings.md << 'EOF'
 EOF
 
 git add _AGENTS/knowledge/sessions/
-git commit -m "[your-agent-id] Initialize session learnings"
+git commit -m "[your-session-id] Initialize session learnings"
 ```
 
-### Merge conflicts in session files
+### Agent Identity Not Showing in Git Log
+
+**Problem:** Commits show wrong author or generic name.
+
+**Solution:**
+```bash
+# Check if session is activated
+echo $GIT_AUTHOR_NAME
+echo $SESSION_SLUG
+
+# If not set, activate session
+cd sessions/active/your-session/
+source .session-env
+
+# Verify activation
+echo $GIT_AUTHOR_NAME  # Should show: Agent-your-id (via username)
+echo $SESSION_SLUG    # Should show: your-session-id
+
+# If commits already made with wrong identity, amend last commit
+git commit --amend --reset-author --no-edit
+```
+
+### Merge Conflicts in Session Files
 
 **Problem:** Merging session to main causes conflicts in worklog or active-plan.
 
@@ -998,36 +576,82 @@ git commit -m "[your-agent-id] Initialize session learnings"
 # Session files conflicts: always keep your version
 git checkout --ours sessions/active/your-session/worklog.md
 git add sessions/
-git commit -m "[your-agent-id] Resolve session files conflict"
+git commit -m "[your-session-id] Resolve session files conflict"
 ```
 
-Session files are agent-specific and shouldn't conflict if namespaced correctly. If they do, it means directory structure issue.
+---
 
-### Agent identity not showing in git log
+## Audit & Traceability
 
-**Problem:** Commits show wrong author or generic name.
+### Agent Attribution Queries
 
-**Solution:**
 ```bash
-# Check if session is activated
-echo $GIT_AUTHOR_NAME
-echo $SESSION_AGENT
+# View all commits for specific session
+git log --grep="2025-10-14-auth-system" --oneline
+git log --grep="2025-10-14-api-work" --oneline
 
-# If not set, activate session
-cd sessions/active/your-session/
-source .session-env
+# See session activity summary (commit count)
+git shortlog -sn --grep="Session complete"
 
-# Verify activation
-echo $GIT_AUTHOR_NAME  # Should show: Agent-your-id (via username)
-echo $SESSION_AGENT    # Should show: your-agent-id
+# Find who last modified a file
+git blame src/api.js
 
-# If commits already made with wrong identity, amend last commit
-git commit --amend --reset-author --no-edit
+# View session work on specific file
+git log --grep="2025-10-14-auth-system" --oneline -- src/auth.js
+
+# See all completed sessions
+git log --grep="Session complete" --oneline
+
+# Find all KB merges
+git log --grep="KB merge" --oneline
+
+# View commits in date range
+git log --since="2025-10-01" --until="2025-10-14" --grep="2025-10-14"
 ```
 
-**Cause:** Session not activated before committing. Always `source .session-env` before working.
+### Rollback Strategies
+
+```bash
+# Revert entire session (find merge commit first)
+git log --oneline --grep="2025-10-14-auth-system"
+# Output: abc1234 [2025-10-14-auth-system] Session complete: 2025-10-14-auth-system
+git revert abc1234
+
+# Revert all changes by specific session to a file
+git log --grep="2025-10-14-auth-system" --format="%H" -- src/api.js | xargs -I {} git revert {}
+
+# Cherry-pick good commits from abandoned session
+git log session/2025-10-14-abandoned --oneline
+# Pick specific commits
+git cherry-pick <commit-hash>
+
+# Undo specific file changes from session
+git checkout origin/main -- src/problem-file.js
+git commit -m "[manual] Revert problem-file.js from session"
+```
+
+### Audit Reports
+
+```bash
+# Session productivity report (commits per session)
+git log --all --grep="Session complete" --format="%s" | sort | uniq -c | sort -rn
+
+# Session completion rate
+git log --all --grep="Session complete" --format="%s" | sort | uniq -c
+
+# KB contributions
+git log --all --grep="KB merge" --format="%s" | sort | uniq -c
+
+# Files most frequently modified by session
+git log --grep="2025-10-14-auth-system" --name-only --format="" | sort | uniq -c | sort -rn
+
+# Session activity by date
+git log --grep="2025-10-14" --format="%ad" --date=short | sort | uniq -c | sort -rn
+
+# Lines added/removed by session
+git log --grep="2025-10-14-auth-system" --numstat --format="" | awk '{added+=$1; removed+=$2} END {print "Added:", added, "Removed:", removed}'
+```
 
 ---
 
 **📚 For essential protocol overview, return to [SESSIONS-README.md](SESSIONS-README.md)**
-

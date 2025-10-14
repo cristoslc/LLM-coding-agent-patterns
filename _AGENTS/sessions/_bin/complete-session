@@ -1,16 +1,15 @@
 #!/bin/bash
 # Session completion script
-# Usage: ./complete-session <agent-id> <session-slug>
+# Usage: ./complete-session <session-slug>
 
 set -e
 
-AGENT_ID="${1:-}"
-SESSION_SLUG="${2:-}"
+SESSION_SLUG="${1:-}"
 
 # Validate arguments
-if [ -z "$AGENT_ID" ] || [ -z "$SESSION_SLUG" ]; then
-  echo "Usage: $0 <agent-id> <session-slug>"
-  echo "Example: $0 cursor-1 2025-10-14-auth-system"
+if [ -z "$SESSION_SLUG" ]; then
+  echo "Usage: $0 <session-slug>"
+  echo "Example: $0 2025-10-14-auth-system"
   exit 1
 fi
 
@@ -44,7 +43,6 @@ if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
   # Use template if available, otherwise inline
   if [ -f "_AGENTS/sessions/_templates/kb-merge-SESSION.md" ]; then
     sed -e "s/{{SOURCE_SESSION}}/$SESSION_SLUG/g" \
-        -e "s/{{AGENT_ID}}/$AGENT_ID/g" \
         -e "s/{{TOPIC}}/$TOPIC/g" \
         "_AGENTS/sessions/_templates/kb-merge-SESSION.md" > "sessions/planned/$KB_SESSION/SESSION.md"
   else
@@ -53,7 +51,6 @@ if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
 
 ## Context
 - **Source Session**: $SESSION_SLUG
-- **Agent**: $AGENT_ID
 - **Learnings Path**: _AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md
 
 ## Acceptance Criteria
@@ -75,7 +72,7 @@ EOF
   fi
   
   git add "sessions/planned/$KB_SESSION/"
-  git commit -m "[$AGENT_ID] Create KB merge session: $KB_SESSION"
+  git commit -m "[$SESSION_SLUG] Create KB merge session: $KB_SESSION"
   echo "✅ KB merge session created: $KB_SESSION"
 fi
 
@@ -83,26 +80,26 @@ fi
 echo "📁 Moving session to completed/..."
 mv "$SESSION_PATH" sessions/completed/
 git add sessions/
-git commit -m "[$AGENT_ID] Complete session $SESSION_SLUG"
+git commit -m "[$SESSION_SLUG] Complete session"
 
 # 4. Merge to main
 echo "🔀 Merging to main..."
 git checkout main
 git pull origin main
-git merge --squash "session/$AGENT_ID/$SESSION_SLUG"
-git commit -m "[$AGENT_ID] Session complete: $SESSION_SLUG"
+git merge --squash "session/$SESSION_SLUG"
+git commit -m "[$SESSION_SLUG] Session complete: $SESSION_SLUG"
 git push origin main
 
 # 5. Cleanup
 echo "🧹 Cleaning up..."
-git branch -d "session/$AGENT_ID/$SESSION_SLUG"
+git branch -d "session/$SESSION_SLUG"
 
 echo ""
 echo "✅ Session complete: $SESSION_SLUG"
 echo ""
 echo "⚠️  Remember to deactivate session environment:"
 echo "  unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL"
-echo "  unset SESSION_AGENT SESSION_SLUG SESSION_BRANCH PS1"
+echo "  unset SESSION_SLUG SESSION_BRANCH PS1"
 echo ""
 echo "💡 If you used a worktree, clean it up:"
 echo "  git worktree remove <worktree-path>"
