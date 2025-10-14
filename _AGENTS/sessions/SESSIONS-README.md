@@ -30,31 +30,44 @@ This protocol supports multiple agents working concurrently across local and clo
 4. **Agent Attribution** - Every commit tagged with agent identity
 5. **Two-Phase Knowledge** - Capture learnings fast, merge deliberately
 
-### Agent Identity Setup
+### Session Activation
 
-Each agent must configure a unique git identity:
+When claiming a session, the agent context is established through environment variables (not git config):
 
 ```bash
-# Format: "{Agent-Type}-{Agent-ID} (via {Human})"
-git config user.name "Cursor-Local-1 (via cristos)"
-git config user.email "cristos+cursor-1@agents.local"
+# Set per-session (in .session-env file)
+export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
+export GIT_AUTHOR_EMAIL="cristos+cursor-1@agents.local"
+export GIT_COMMITTER_NAME="Cursor-Local-1 (via cristos)"
+export GIT_COMMITTER_EMAIL="cristos+cursor-1@agents.local"
+export SESSION_AGENT="cursor-1"
+export SESSION_SLUG="2025-10-14-auth-system"
 ```
 
-**Why?** Full commit traceability, easy rollback, clear accountability in git history.
+**Why environment variables?**
+- No git config pollution (safe for supervised agents sharing workspace)
+- Session-scoped (activation ends when session completes)
+- Explicit identity per session
+- Works in any context (worktree or main repo)
 
-**Setup:** Git worktrees recommended (one per agent). See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#git-worktrees-setup) for details.
+**Session activation = Agent identity for that session.**
 
-### Session Claiming
+### Session Claiming & Activation
 
-Agents claim sessions atomically via git:
+Claiming a session establishes the agent context for that work:
 
 1. Pull latest: `git pull origin main`
 2. Check `.agents/sessions.lock` for availability
 3. Add claim: `echo "{agent-id}:{session-slug}:$(date +%s)" >> .agents/sessions.lock`
 4. Commit and push: `git commit -m "[{agent-id}] Claim session" && git push`
 5. If push fails (race condition), pick different session
+6. Move session to `active/{agent-id}/`
+7. Create `.session-env` file in session directory
+8. Create session branch and activate: `source .session-env`
 
-See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#session-claim-protocol) for complete code example.
+**The `.session-env` file contains all environment variables for this session's agent identity.**
+
+See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#session-claim-and-activation) for complete implementation.
 
 ## Naming Conventions
 
@@ -168,10 +181,10 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#detailed-state-flowcharts) for
 
 ### Commit Strategy
 
-All commits prefixed with agent ID:
+All commits prefixed with agent ID and automatically attributed via session environment:
 
 ```bash
-# Code changes
+# Code changes (uses GIT_AUTHOR_NAME/EMAIL from .session-env)
 git add src/ && git commit -m "[cursor-1] feat: implement feature"
 
 # Session files
@@ -183,6 +196,8 @@ git add _AGENTS/knowledge/sessions/ && git commit -m "[cursor-1] docs: capture l
 # KB canonical (only in KB merge sessions)
 git add _AGENTS/knowledge/shared/ && git commit -m "[cursor-1] docs: merge KB learnings"
 ```
+
+**Note:** Git automatically uses `GIT_AUTHOR_NAME`, `GIT_COMMITTER_NAME`, etc. from environment when set.
 
 **Avoid:** `git add .` - be specific about what you're committing.
 
@@ -215,7 +230,7 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 8. **Agent-prefixed commits** - Every commit tagged with `[{agent-id}]`
 9. **KB learnings are session-scoped** - Never write directly to `knowledge/shared/`
 10. **Create KB merge sessions** - Auto-generate at session completion
-11. **Verify agent identity** - Check git config before starting
+11. **Verify session activation** - Check environment variables are set (`echo $GIT_AUTHOR_NAME`)
 12. **Coordinate via git** - No file system locks or external tools
 
 ## Session States
@@ -232,20 +247,30 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 ### Starting a Session
 
 ```bash
-# 1. Setup identity (once per worktree)
-git config user.name "Cursor-Local-1 (via cristos)"
-git config user.email "cristos+cursor-1@agents.local"
-
-# 2. Claim session
+# 1. Claim session
 git pull origin main
 echo "cursor-1:2025-10-14-feature-x:$(date +%s)" >> .agents/sessions.lock
 git add .agents/sessions.lock
 git commit -m "[cursor-1] Claim session 2025-10-14-feature-x"
 git push origin main  # If fails, pick different session
 
-# 3. Move to active and create branch
+# 2. Move to active and create activation file
+mkdir -p sessions/active/cursor-1
 mv sessions/planned/2025-10-14-feature-x sessions/active/cursor-1/
+
+cat > sessions/active/cursor-1/2025-10-14-feature-x/.session-env << 'EOF'
+export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
+export GIT_AUTHOR_EMAIL="cristos+cursor-1@agents.local"
+export GIT_COMMITTER_NAME="Cursor-Local-1 (via cristos)"
+export GIT_COMMITTER_EMAIL="cristos+cursor-1@agents.local"
+export SESSION_AGENT="cursor-1"
+export SESSION_SLUG="2025-10-14-feature-x"
+EOF
+
+# 3. Create branch and activate session
 git checkout -b session/cursor-1/2025-10-14-feature-x
+cd sessions/active/cursor-1/2025-10-14-feature-x
+source .session-env
 
 # 4. Start work!
 ```
@@ -261,7 +286,8 @@ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
   # [Use KB merge session template]
 fi
 
-# 3. Move to completed
+# 3. Move to completed and deactivate
+cd ../../../..  # Back to repo root
 mv sessions/active/cursor-1/2025-10-14-feature-x sessions/completed/
 git add sessions/ && git commit -m "[cursor-1] Complete session"
 
@@ -272,8 +298,12 @@ git merge --squash session/cursor-1/2025-10-14-feature-x
 git commit -m "[cursor-1] Session complete: 2025-10-14-feature-x"
 git push origin main
 
-# 5. Cleanup
+# 5. Cleanup and deactivate
 git branch -d session/cursor-1/2025-10-14-feature-x
+unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+unset SESSION_AGENT SESSION_SLUG
+
+# Session context ended
 ```
 
 See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete examples.
@@ -283,18 +313,21 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete 
 This multi-agent protocol enables autonomous, distributed collaboration through:
 
 1. **Git-Based Coordination** - No orchestrator, git provides atomic operations
-2. **Namespace Isolation** - Separate paths/branches minimize conflicts
-3. **Two-Phase Knowledge** - Fast capture, deliberate merge
-4. **Full Traceability** - Every commit attributed to specific agent
-5. **Optimistic Locking** - Session claims via git push races
-6. **Worktree Isolation** - Each agent has own working directory
+2. **Session-Scoped Activation** - Agent identity via environment variables, session lifecycle
+3. **Namespace Isolation** - Separate paths/branches minimize conflicts
+4. **Two-Phase Knowledge** - Fast capture, deliberate merge
+5. **Full Traceability** - Every commit attributed to specific agent
+6. **Optimistic Locking** - Session claims via git push races
 7. **Quality Control** - KB merges are reviewable sessions
 
-**Key Principle:** Use git itself as the distributed coordination system.
+**Key Principles:**
+- Use git itself as the distributed coordination system
+- Activation is per-session (not per-agent or per-worktree)
+- Worktrees are optional infrastructure for concurrent sessions
 
 ---
 
 **📚 Next Steps:**
 - See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md) for detailed examples, git commands, and troubleshooting
 - Review existing sessions in `planned/` to claim work
-- Set up your agent identity and worktree
+- Claim a session and activate with `.session-env`
