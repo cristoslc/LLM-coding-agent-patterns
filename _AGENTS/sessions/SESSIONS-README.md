@@ -14,38 +14,35 @@ Sessions are **structured units of work** that enable multiple AI agents to coll
 
 Sessions move through states (`planned` → `active` → `completed`) as work progresses, creating a clear audit trail of what was done, by whom, and why.
 
-## Workflow Overview
+## Session Lifecycle
+
+Sessions move through states as work progresses:
 
 ```mermaid
 flowchart LR
-    Planned["planned/
-    (unclaimed)"] -->|"Claim"| Active["active/{agent}/
-    (in progress)"]
-    Active -->|"Complete"| Completed["completed/
-    (merged)"]
-    Active -->|"Cancel"| Abandoned["abandoned/
-    (documented)"]
+    Planned["planned/"] -->|"Claim"| Active["active/"]
+    Active -->|"Complete"| Completed["completed/"]
+    Active -->|"Cancel"| Abandoned["abandoned/"]
 ```
 
-### Basic Workflow
+### Basic Flow
 
-1. **Claim a session** - Agent atomically claims work from `planned/`
-2. **Activate session** - Environment variables establish agent identity
+1. **Claim** - Agent atomically claims session from `planned/` via git push
+2. **Activate** - Source `.session-env` to establish agent identity
 3. **Work** - Make changes, update worklog, capture learnings
 4. **Complete** - Generate patch, create KB merge session if needed, merge to main
-5. **Deactivate** - Unset environment, session context ends
 
-### Multi-Agent Workflow
+### Multi-Agent Coordination
 
-Multiple agents work concurrently:
+Multiple agents work concurrently on different sessions:
 - Agent `cursor-1` claims session A → works → completes
 - Agent `claude-a` claims session B → works → completes (in parallel)
-- Agent `cursor-1` claims session C → works → completes
+- Agents never block each other
 
-Agents coordinate through **git itself** (no orchestrator needed):
+Coordination through **git** (no orchestrator):
 - Session claims via atomic git push
-- Namespace isolation (agent-id in branch names and commits)
-- Optimistic locking (race conditions handled gracefully)
+- Namespace isolation via branch names and commits
+- Optimistic locking handles race conditions gracefully
 
 ## Core Principles
 
@@ -154,34 +151,7 @@ Simplified structure for KB merge sessions:
 - **`SESSION.md`** - Auto-generated with source session reference
 - **`worklog.md`** - KB merge decisions and conflicts
 
-## Session Lifecycle
-
-```mermaid
-flowchart TD
-    Start["Session Request"] --> CheckExisting["Check Existing Sessions"]
-    CheckExisting --> PlannedState["Planned State"]
-    PlannedState --> ActiveState["Active State"]
-    ActiveState --> CompletedState["Completed State"]
-    ActiveState --> AbandonedState["Abandoned State"]
-```
-
-### State Transitions
-
-**Planned → Active:**
-1. Claim session via `.agents/sessions.lock`
-2. Move to `sessions/active/`
-3. Create session branch: `session/{agent-id}/{session-slug}`
-4. Begin work
-
-**Active → Completed:**
-1. Finalize documentation (worklog, active-plan)
-2. Generate patch file
-3. **Check for KB learnings** → create KB merge session if exists
-4. Move to `sessions/completed/`
-5. Squash merge to main
-6. Delete session branch
-
-See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#detailed-state-flowcharts) for detailed flowcharts.
+> **📊 For detailed state flowcharts:** See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#detailed-state-flowcharts)
 
 ## Knowledge Base Management
 
