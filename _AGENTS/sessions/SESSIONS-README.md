@@ -12,7 +12,7 @@ Sessions are **structured units of work** that enable multiple AI agents to coll
 - Produces **artifacts** (code changes, documentation, knowledge)
 - Maintains **traceability** (git attribution, patch files)
 
-Sessions move through states (`planned` → `active` → `completed`) as work progresses, creating a clear audit trail of what was done, by whom, and why.
+Sessions move through states (`drafting` → `planned` → `active` → `completed`) as work progresses, creating a clear audit trail of what was done, by whom, and why.
 
 ## Session Lifecycle
 
@@ -20,19 +20,29 @@ Sessions move through states as work progresses:
 
 ```mermaid
 flowchart LR
-    Planned["planned/"] -->|"Claim"| Active["active/"]
-    Active -->|"Complete"| Completed["completed/"]
-    Active -->|"Cancel"| Abandoned["abandoned/"]
+    Drafting["drafting/
+    (being defined)"] -->|"Ready"| Planned["planned/
+    (ready to claim)"]
+    Planned -->|"Claim"| Active["active/
+    (in progress)"]
+    Active -->|"Complete"| Completed["completed/
+    (merged)"]
+    Active -->|"Cancel"| Abandoned["abandoned/
+    (documented)"]
 ```
 
 ### Basic Flow
 
-1. **Claim** - Agent atomically claims session from `planned/` via git push
-2. **Activate** - Source `.session-env` to establish agent identity
-3. **Work** - Make changes, update worklog, capture learnings
-4. **Complete** - Generate patch, create KB merge session if needed, merge to main
+1. **Draft** - Session created in `drafting/` (context, criteria, plan incomplete)
+2. **Ready** - Moved to `planned/` when ready for agents to claim
+3. **Claim** - Agent atomically claims session from `planned/` via git push
+4. **Activate** - Source `.session-env` to establish agent identity
+5. **Work** - Make changes, update worklog, capture learnings
+6. **Complete** - Generate patch, create KB merge session if needed, merge to main
 
 ### Multi-Agent Coordination
+
+**Background agents can monitor `planned/`** for sessions matching their capabilities.
 
 Multiple agents work concurrently on different sessions:
 - Agent `cursor-1` claims session A → works → completes
@@ -71,10 +81,11 @@ sessions/
 │   ├── 2025-10-14-api-work/
 │   └── ...
 ├── completed/       # Finished sessions (all agents)
-└── planned/         # Future sessions (any agent can claim)
+├── drafting/        # Sessions being defined (not ready for agents)
+└── planned/         # Ready to claim (agents monitor this)
 ```
 
-**Utilities** (`_bin/`, `_templates/`) sort first, keeping them separate from **state directories** (`abandoned/`, `active/`, `completed/`, `planned/`).
+**Utilities** (`_bin/`, `_templates/`) sort first, keeping them separate from **state directories** (`abandoned/`, `active/`, `completed/`, `drafting/`, `planned/`).
 
 ## Session Activation
 
@@ -245,10 +256,11 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 
 | State | Location | Description |
 |-------|----------|-------------|
-| **Planned** | `planned/` | Future work, any agent can claim |
-| **Active** | `active/{agent-id}/` | Being worked on by specific agent |
-| **Completed** | `completed/` | Successfully finished |
-| **Abandoned** | `abandoned/` | Cancelled or incomplete |
+| **Drafting** | `drafting/` | Being defined, not ready for agents yet |
+| **Planned** | `planned/` | Ready to claim, agents can monitor this |
+| **Active** | `active/` | Being worked on by an agent |
+| **Completed** | `completed/` | Successfully finished and merged |
+| **Abandoned** | `abandoned/` | Cancelled or incomplete, documented |
 
 ## Quick Start
 
