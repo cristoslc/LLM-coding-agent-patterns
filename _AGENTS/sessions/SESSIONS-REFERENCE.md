@@ -6,14 +6,71 @@ This document contains detailed examples, git commands, troubleshooting guides, 
 
 ## Table of Contents
 
+- [Utility Scripts](#utility-scripts)
 - [Git Worktrees Setup](#git-worktrees-setup)
 - [Agent Registry](#agent-registry)
-- [Session Claim Protocol](#session-claim-protocol)
+- [Session Claim and Activation](#session-claim-and-activation)
 - [Detailed State Flowcharts](#detailed-state-flowcharts)
 - [KB Merge Session Template](#kb-merge-session-template)
 - [Conflict Resolution Examples](#conflict-resolution-examples)
 - [Traceability & Auditing](#traceability--auditing)
 - [Directory Structure Example](#directory-structure-example)
+
+---
+
+## Utility Scripts
+
+The `_bin/` directory contains executable scripts for common session operations:
+
+### claim-session
+
+Claims and activates a session atomically.
+
+**Usage:**
+```bash
+./_bin/claim-session <agent-id> <session-slug>
+```
+
+**Example:**
+```bash
+./_bin/claim-session cursor-1 2025-10-14-auth-system
+
+# Then activate:
+cd sessions/active/cursor-1/2025-10-14-auth-system
+source .session-env
+```
+
+**What it does:**
+1. Pulls latest git state
+2. Checks session availability
+3. Claims session atomically via git push
+4. Moves session to `active/{agent-id}/`
+5. Creates `.session-env` file
+6. Creates session branch
+7. Provides activation instructions
+
+### complete-session
+
+Completes a session and merges to main.
+
+**Usage:**
+```bash
+./_bin/complete-session <agent-id> <session-slug>
+```
+
+**Example:**
+```bash
+# From repo root
+./_bin/complete-session cursor-1 2025-10-14-auth-system
+```
+
+**What it does:**
+1. Generates patch file
+2. Creates KB merge session if learnings exist
+3. Moves session to `completed/`
+4. Merges to main via squash merge
+5. Deletes session branch
+6. Reminds you to deactivate environment
 
 ---
 
@@ -661,17 +718,26 @@ Complete repository layout with multi-agent support:
 │   │           └── learnings.md
 │   │
 │   └── sessions/
-│       ├── planned/            # Any agent can claim
-│       │   ├── 2025-10-15-new-feature/
-│       │   │   └── SESSION.md
-│       │   ├── kb-2025-10-14-merge-auth-patterns/
-│       │   │   └── SESSION.md
-│       │   └── 2025-10-16-refactor-api/
-│       │       └── SESSION.md
+│       ├── _bin/               # Utility scripts
+│       │   ├── claim-session
+│       │   └── complete-session
+│       │
+│       ├── _templates/         # Templates
+│       │   ├── kb-merge-SESSION.md
+│       │   └── session-env.template
+│       │
+│       ├── SESSIONS-README.md      # Essential protocol
+│       ├── SESSIONS-REFERENCE.md   # This file
+│       │
+│       ├── abandoned/
+│       │   └── 2025-10-11-failed-approach/
+│       │       ├── SESSION.md
+│       │       └── worklog.md
 │       │
 │       ├── active/             # Agent-namespaced
 │       │   ├── cursor-1/
 │       │   │   └── 2025-10-14-auth-system/
+│       │   │       ├── .session-env      # Session activation
 │       │   │       ├── SESSION.md
 │       │   │       ├── worklog.md
 │       │   │       ├── active-plan.md
@@ -679,6 +745,7 @@ Complete repository layout with multi-agent support:
 │       │   │
 │       │   └── claude-a/
 │       │       └── 2025-10-14-api-work/
+│       │           ├── .session-env      # Session activation
 │       │           ├── SESSION.md
 │       │           ├── worklog.md
 │       │           └── active-plan.md
@@ -694,13 +761,13 @@ Complete repository layout with multi-agent support:
 │       │       ├── worklog.md
 │       │       └── 2025-10-12-database-schema.patch
 │       │
-│       ├── abandoned/
-│       │   └── 2025-10-11-failed-approach/
-│       │       ├── SESSION.md
-│       │       └── worklog.md
-│       │
-│       ├── SESSIONS-README.md      # Essential protocol
-│       └── SESSIONS-REFERENCE.md   # This file
+│       └── planned/            # Any agent can claim
+│           ├── 2025-10-15-new-feature/
+│           │   └── SESSION.md
+│           ├── kb-2025-10-14-merge-auth-patterns/
+│           │   └── SESSION.md
+│           └── 2025-10-16-refactor-api/
+│               └── SESSION.md
 │
 ├── src/                        # Your application code
 │   ├── api.js
