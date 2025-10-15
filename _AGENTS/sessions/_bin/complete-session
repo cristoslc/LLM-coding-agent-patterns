@@ -37,16 +37,16 @@ if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
   TOPIC=$(head -1 "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" | sed 's/^# //' | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
   KB_SESSION="kb-$(date +%Y-%m-%d)-merge-$TOPIC"
   
-  # Create KB merge session
-  mkdir -p "sessions/planned/$KB_SESSION"
+  # Create KB merge session in drafting first
+  mkdir -p "sessions/drafting/$KB_SESSION"
   
   # Use template if available, otherwise inline
   if [ -f "_AGENTS/sessions/_templates/kb-merge-SESSION.md" ]; then
     sed -e "s/{{SOURCE_SESSION}}/$SESSION_SLUG/g" \
         -e "s/{{TOPIC}}/$TOPIC/g" \
-        "_AGENTS/sessions/_templates/kb-merge-SESSION.md" > "sessions/planned/$KB_SESSION/SESSION.md"
+        "_AGENTS/sessions/_templates/kb-merge-SESSION.md" > "sessions/drafting/$KB_SESSION/SESSION.md"
   else
-    cat > "sessions/planned/$KB_SESSION/SESSION.md" << EOF
+    cat > "sessions/drafting/$KB_SESSION/SESSION.md" << EOF
 # KB Merge Session: $TOPIC
 
 ## Context
@@ -71,9 +71,10 @@ if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
 EOF
   fi
   
-  git add "sessions/planned/$KB_SESSION/"
-  git commit -m "[$SESSION_SLUG] Create KB merge session: $KB_SESSION"
-  echo "✅ KB merge session created: $KB_SESSION"
+  git add "sessions/drafting/$KB_SESSION/"
+  git commit -m "[$SESSION_SLUG] Create KB merge session in drafting: $KB_SESSION"
+  echo "✅ KB merge session created in drafting: $KB_SESSION"
+  echo "📝 Review and move to planned/ when ready for agents to claim"
 fi
 
 # 3. Move to completed
