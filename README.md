@@ -39,6 +39,7 @@ _AGENTS/
     ├── completed/           # Finished sessions
     ├── planned/             # Future sessions
     ├── abandoned/           # Cancelled/incomplete sessions
+    ├── _templates/          # Jinja2 templates for session documents
     └── SESSIONS-README.md   # Detailed session management documentation
 ```
 
@@ -51,6 +52,60 @@ flowchart TD
     PlannedState --> ActiveState["Active State"]
     ActiveState --> CompletedState["Completed State"]
     ActiveState --> AbandonedState["Abandoned State"]
+```
+
+## Templates System
+
+The `_templates/` directory contains Jinja2 templates for generating consistent session documents. These templates use variable substitution to create personalized documents for different session types.
+
+### Available Templates
+
+- **`rfc.md.j2`**: Request for Comments (RFC) document template
+- **`kb-merge-SESSION.md.j2`**: Knowledge base merge session template
+- **`session-env.template.j2`**: Session environment configuration template
+
+### Using Templates
+
+Templates use Jinja2 syntax with variables enclosed in double curly braces:
+```jinja2
+{{ VARIABLE_NAME }}
+```
+
+Comments and documentation are enclosed in Jinja2 comment blocks:
+```jinja2
+{# This is a template comment #}
+```
+
+### Template Variables
+
+Each template includes comprehensive documentation of:
+- **Purpose**: What the template is used for
+- **Variables**: Required and optional variables
+- **Usage**: How to use the template
+- **Examples**: Sample values for variables
+
+### Rendering Templates
+
+To render a template, you need:
+1. A Jinja2 template engine (Python's `jinja2` package)
+2. A context dictionary with variable values
+3. Template rendering logic
+
+Example Python code:
+```python
+from jinja2 import Template
+
+with open('_templates/rfc.md.j2', 'r') as f:
+    template = Template(f.read())
+
+context = {
+    'TITLE': 'Unifying Access Control',
+    'AUTHORS': 'Jordan Lee (Platform Engineering)',
+    'DATE': 'October 14, 2025',
+    # ... other variables
+}
+
+rendered = template.render(**context)
 ```
 
 ## Getting Started
