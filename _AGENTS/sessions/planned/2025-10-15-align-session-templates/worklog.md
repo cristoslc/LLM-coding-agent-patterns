@@ -20,4 +20,8 @@ During session `2025-10-15-align-sessions-protocol`, the scripts were updated bu
 **Why This Matters:**
 Templates are used by scripts to generate session files. If templates are outdated, generated files will be incorrect, causing confusion and errors.
 
-**Session Status:** Drafting - ready for review and move to planned/
+## [2025-10-15] Status Update
+
+Session moved from **drafting** to **planned** status. Ready for agent to claim and begin work.
+
+**Session Status:** Planned - ready for agent to claim
