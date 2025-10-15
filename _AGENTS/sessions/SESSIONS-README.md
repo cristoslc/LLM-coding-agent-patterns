@@ -207,8 +207,9 @@ sessions/
 │   ├── claim-session
 │   └── complete-session
 ├── _templates/      # Templates for sessions and configs
-│   ├── kb-merge-SESSION.md
-│   └── session-env.template
+│   ├── SESSION.md.j2           # Standard session template
+│   ├── kb-merge-SESSION.md     # KB merge session template
+│   └── session-env.template    # Session environment template
 ├── SESSIONS-README.md        # This file (essential protocol)
 ├── SESSIONS-REFERENCE.md     # Detailed examples & commands
 ├── abandoned/       # Cancelled/incomplete sessions
@@ -350,6 +351,25 @@ Format: `[{session-id}] <type>: <description>`
 - **`active-plan.md`** - Dynamic task lists, issues, next steps
 - **`subsessions.md`** - Sub-session tracking
 - **`{session-slug}.patch`** - Final patch file (generated at completion)
+
+#### Session Templates
+
+The `_templates/` directory provides Jinja2 templates for creating consistent session files:
+
+**`SESSION.md.j2`** - Standard session template with comprehensive structure:
+- **Variables**: `SESSION_SLUG`, `CONTEXT`, `PROBLEM_STATEMENT`, `ACCEPTANCE_CRITERIA`, `IMPLEMENTATION_PLAN`, `SUCCESS_METRICS`, `RISKS`, `DEPENDENCIES`
+- **Usage**: Automatically used by session creation tools, or manually with template substitution
+- **Structure**: Includes context, problem analysis, phased implementation plan, success metrics, risk mitigation, and edge case considerations
+
+**`kb-merge-SESSION.md.j2`** - KB merge session template:
+- **Variables**: `TOPIC`, `SOURCE_SESSION`, `TIMESTAMP`
+- **Usage**: Automatically created by complete-session script when learnings exist
+- **Purpose**: Guides systematic merging of session learnings into canonical knowledge base
+
+**`session-env.template.j2`** - Session environment template:
+- **Variables**: `SESSION_SLUG`, `USER_NAME`, `USER_EMAIL`
+- **Usage**: Automatically created by claim-session script for session activation
+- **Purpose**: Establishes agent identity and session-specific environment variables
 
 #### KB Merge Session Files
 

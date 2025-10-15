@@ -85,7 +85,38 @@ Completes a session and merges to main.
 
 ## Session Templates
 
-The `_templates/` directory contains templates for session files.
+The `_templates/` directory contains Jinja2 templates for creating consistent session files.
+
+### SESSION.md.j2
+
+Template for standard sessions with comprehensive structure and protocol compliance.
+
+**Template Variables:**
+- `SESSION_SLUG` - Session identifier
+- `CONTEXT` - Brief description of what needs to be done
+- `PROBLEM_STATEMENT` - Detailed analysis of the problem
+- `ACCEPTANCE_CRITERIA` - List of specific, measurable criteria
+- `IMPLEMENTATION_PLAN` - Step-by-step execution plan
+- `SUCCESS_METRICS` - How to measure success
+- `RISKS` - Potential risks and mitigation strategies
+- `DEPENDENCIES` - Required resources and knowledge
+
+**Usage:**
+```bash
+# Automatically used by session creation tools
+# Manual creation if needed:
+sed -e "s/{{SESSION_SLUG}}/2025-10-14-auth-system/g" \
+    -e "s/{{CONTEXT}}/Implement JWT-based authentication system/g" \
+    -e "s/{{PROBLEM_STATEMENT}}/Current auth system lacks security.../g" \
+    "_templates/SESSION.md.j2" > "sessions/planned/2025-10-14-auth-system/SESSION.md"
+```
+
+**Structure Includes:**
+- Comprehensive context and problem analysis
+- Phased implementation plan with timeline
+- Success metrics and risk mitigation
+- Edge case considerations
+- Protocol compliance notes
 
 ### kb-merge-SESSION.md
 

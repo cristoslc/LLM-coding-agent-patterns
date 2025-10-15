@@ -1,0 +1,90 @@
+{# =======================================================
+   SESSION TEMPLATE
+   Purpose:
+     This template creates a comprehensive session document
+     for the Agent Sessions Protocol with all required sections
+     and detailed guidance for multi-agent collaboration.
+
+   Variables:
+     - SESSION_SLUG: The unique identifier for the session
+     - CONTEXT: Brief description of what needs to be done
+     - PROBLEM_STATEMENT: Detailed analysis of the problem
+     - ACCEPTANCE_CRITERIA: List of specific, measurable criteria
+     - IMPLEMENTATION_PLAN: Step-by-step plan for execution
+     - SUCCESS_METRICS: How to measure success
+     - RISKS: Potential risks and mitigation strategies
+     - DEPENDENCIES: Required resources and knowledge
+   ======================================================= #}
+
+# Session: {{ SESSION_SLUG }}
+
+## Context
+{{ CONTEXT }}
+
+## Problem Statement
+{{ PROBLEM_STATEMENT }}
+
+## Acceptance Criteria
+{% for criterion in ACCEPTANCE_CRITERIA %}
+- [ ] {{ criterion }}
+{% endfor %}
+
+## Implementation Plan
+
+### Phase 1: Analysis and Planning (Day 1)
+1. **Comprehensive Analysis**: Review all relevant code, documentation, and requirements
+2. **Stakeholder Identification**: Identify who needs to be involved or consulted
+3. **Risk Assessment**: Identify potential challenges and mitigation strategies
+4. **Resource Planning**: Ensure all required tools and access are available
+
+### Phase 2: Core Implementation (Days 2-3)
+5. **Foundation Work**: Establish the basic framework and structure
+6. **Core Functionality**: Implement the primary features or fixes
+7. **Integration Points**: Connect with existing systems and processes
+8. **Initial Testing**: Validate basic functionality works as expected
+
+### Phase 3: Refinement and Testing (Days 4-5)
+9. **Edge Case Handling**: Address all identified edge cases and error conditions
+10. **Performance Optimization**: Ensure the solution meets performance requirements
+11. **Comprehensive Testing**: Execute full test suite including integration tests
+12. **Documentation Updates**: Update all relevant documentation
+
+### Phase 4: Final Validation and Delivery (Day 6)
+13. **Final Verification**: Complete end-to-end testing and validation
+14. **Code Review**: Ensure code quality and adherence to standards
+15. **Deployment Preparation**: Prepare for production deployment if applicable
+16. **Knowledge Capture**: Document learnings and create KB merge session if needed
+
+## Success Metrics
+{% for metric in SUCCESS_METRICS %}
+- **{{ metric.name }}**: {{ metric.description }}
+{% endfor %}
+
+## Risks and Mitigation
+{% for risk in RISKS %}
+- **Risk**: {{ risk.description }}
+  - **Mitigation**: {{ risk.mitigation }}
+  - **Impact**: {{ risk.impact }}
+{% endfor %}
+
+## Dependencies
+{% for dependency in DEPENDENCIES %}
+- **{{ dependency.type }}**: {{ dependency.description }}
+{% endfor %}
+
+## Edge Cases to Consider
+- **Git Repository State**: Handle cases where repository is not in clean state
+- **Permission Issues**: Account for insufficient file or directory permissions
+- **Network Connectivity**: Handle offline or poor network conditions
+- **Concurrent Access**: Manage race conditions and simultaneous operations
+- **Resource Constraints**: Address disk space, memory, or processing limitations
+- **External Dependencies**: Handle unavailable or changed external services
+- **Data Corruption**: Manage corrupted or incomplete data scenarios
+- **User Input Validation**: Validate all user inputs and configurations
+
+## Original Implementation Plan
+{{ IMPLEMENTATION_PLAN }}
+
+---
+
+**Note**: This session follows the Agent Sessions Protocol. SESSION.md becomes read-only when the session moves to active state. Use worklog.md for progress updates and active-plan.md for dynamic task management during active work.
