@@ -107,10 +107,12 @@ source .session-env
 
 ```bash
 # 1. Finalize documentation (worklog, active-plan, generate patch)
+cd sessions/active/2025-10-14-feature-x
+git format-patch main --stdout > 2025-10-14-feature-x.patch
 
 # 2. Check for KB learnings and create KB merge session if exists
 if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
-  # Create KB merge session in planned/
+  # Create KB merge session in drafting/
   # [Use KB merge session template]
 fi
 
@@ -143,7 +145,7 @@ git push origin main
 # 5. Cleanup and deactivate
 git branch -d session/2025-10-14-feature-x
 unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
-unset SESSION_ID SESSION_SLUG
+unset SESSION_SLUG SESSION_BRANCH
 
 # Session context ended
 ```
