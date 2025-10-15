@@ -96,7 +96,7 @@ Template for standard sessions with comprehensive structure and protocol complia
 - `CONTEXT` - Brief description of what needs to be done
 - `PROBLEM_STATEMENT` - Detailed analysis of the problem with specific examples
 - `ACCEPTANCE_CRITERIA` - Comprehensive list combining specific requirements and success metrics
-- `IMPLEMENTATION_PLAN` - Flexible step-by-step execution plan
+- `SUBSESSIONS` - High-level subsessions with implicit TDD (RED->GREEN->REFACTOR) cycle
 - `RISKS` - Potential risks and mitigation strategies with impact assessment
 - `DEPENDENCIES` - Required resources and knowledge
 - `EDGE_CASES` - Specific edge cases to consider
@@ -148,15 +148,32 @@ The current implementation of the session management scripts has several reliabi
 - [ ] Scripts complete successfully in clean repository state without any manual intervention
 - [ ] Scripts handle git operation failures (network issues, permissions) with clear error messages and no corrupt state
 
-## Implementation Plan
-1. Review both scripts to identify all potential edge cases
-2. Add error handling for all file operations
-3. Add validation for all git operations
-4. Ensure consistency in error handling and user feedback
-5. Add documentation for both scripts
-6. Add tests for both scripts
-7. Verify that both scripts work correctly in all edge cases
-8. Create KB merge session if needed
+## Subsessions
+
+### 1. Error Handling for File Operations
+**RED:** Write tests for missing file scenarios, permission errors, invalid paths
+**GREEN:** Implement error handling that makes tests pass
+**REFACTOR:** Extract common error handling patterns, improve error messages
+
+### 2. Git Operation Validation
+**RED:** Write tests for missing branches, worktree conflicts, lock file edge cases
+**GREEN:** Implement validation logic to handle each scenario
+**REFACTOR:** Consolidate validation functions, improve consistency
+
+### 3. User Feedback Consistency
+**RED:** Write tests asserting consistent message format across both scripts
+**GREEN:** Implement standardized error/success message templates
+**REFACTOR:** Extract message formatting to shared utilities
+
+### 4. Documentation and Examples
+- Add inline documentation to all functions
+- Create troubleshooting guide with common scenarios
+- Add usage examples to README
+
+### 5. Integration Testing
+**RED:** Write end-to-end tests for complete claim/complete workflows
+**GREEN:** Fix any integration issues discovered
+**REFACTOR:** Optimize performance, clean up test setup
 
 ## Risks & Mitigations
 - **Risk:** Changes might break existing session workflows

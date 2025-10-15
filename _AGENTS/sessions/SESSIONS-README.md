@@ -346,7 +346,7 @@ Format: `[{session-id}] <type>: <description>`
 
 #### Standard Session Files
 
-- **`SESSION.md`** - Context, acceptance criteria, implementation plan
+- **`SESSION.md`** - Context, acceptance criteria, subsessions (with TDD structure)
 - **`worklog.md`** - Progress tracking with timestamps
 - **`active-plan.md`** - Dynamic task lists, issues, next steps
 - **`subsessions.md`** - Sub-session tracking
@@ -357,9 +357,9 @@ Format: `[{session-id}] <type>: <description>`
 The `_templates/` directory provides Jinja2 templates for creating consistent session files:
 
 **`SESSION.md.j2`** - Standard session template with comprehensive structure:
-- **Variables**: `SESSION_SLUG`, `CONTEXT`, `PROBLEM_STATEMENT`, `ACCEPTANCE_CRITERIA`, `IMPLEMENTATION_PLAN`, `RISKS`, `DEPENDENCIES`, `EDGE_CASES`, `NOTES`
+- **Variables**: `SESSION_SLUG`, `CONTEXT`, `PROBLEM_STATEMENT`, `ACCEPTANCE_CRITERIA`, `SUBSESSIONS`, `RISKS`, `DEPENDENCIES`, `EDGE_CASES`, `NOTES`
 - **Usage**: Automatically used by session creation tools, or manually with template substitution
-- **Structure**: Includes context, problem analysis, comprehensive acceptance criteria (combining requirements and success metrics), implementation plan, risk mitigation, dependencies, and edge case considerations
+- **Structure**: Includes context, problem analysis, comprehensive acceptance criteria (combining requirements and success metrics), subsessions (with implicit TDD RED->GREEN->REFACTOR cycle), risk mitigation, dependencies, and edge case considerations
 
 **`kb-merge-SESSION.md.j2`** - KB merge session template:
 - **Variables**: `TOPIC`, `SOURCE_SESSION`, `TIMESTAMP`
