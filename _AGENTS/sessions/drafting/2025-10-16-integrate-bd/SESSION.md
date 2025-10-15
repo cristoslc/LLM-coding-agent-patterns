@@ -32,6 +32,85 @@ Preserve:
 - KB learnings workflow
 - Git worktrees isolation
 
+## Session Directory Structure
+
+Each session directory contains files with specific roles that complement bd:
+
+### SESSION.md (Read-Only During Active Work)
+- **Created:** During session initialization in drafting/
+- **Permissions:** Made read-only by session-claim when moved to active/
+- **Made Writeable:** By session-complete when moved to completed/
+- **Purpose:** Session contract - what we're building, acceptance criteria, technical approach
+- **Updates:** Only possible in drafting/ or completed/ status; locked during active work
+- **Relationship to bd:** bd issues implement the work defined here
+
+### worklog.md (Chronological Record)
+- **Purpose:** Captures WHEN and WHY decisions were made
+- **Complementary to bd:** bd tracks WHAT (tasks/issues), worklog tracks decision rationale
+- **Key entries:**
+  - When new bd issues are created (with rationale)
+  - When bd issues are completed (with outcomes)
+  - Decision points and trade-offs
+  - Obstacles encountered and how they were resolved
+  - Context that would be lost in issue tracking alone
+- **Format:** Chronological, timestamped entries
+- **Used for:** Learning extraction, session completion review
+
+### scratchpads/ (Per-Subsession Thinking)
+- **Structure:** One scratchpad file per subsession (`scratchpads/subsession-1-setup.md`)
+- **Purpose:** Externalize agent thought processes during active work
+- **Contents:**
+  - Current understanding of the problem
+  - Obstacles and debugging notes
+  - Experiments and their outcomes
+  - Open questions and answers discovered
+  - Links to relevant bd issues
+- **Lifecycle:**
+  - Created at subsession start
+  - Updated throughout subsession
+  - Archived at subsession completion
+  - Combined with worklog → learnings.md (in KB per SOP)
+- **Note:** Replaces `active-plan.md` with per-subsession scoping
+
+### .beads/ (bd Database)
+- **Contents:**
+  - SQLite database (*.db files) - NOT tracked in git
+  - JSONL exports (*.jsonl) - tracked in git for merge-friendliness
+- **Purpose:** Task tracking, dependencies, status queries
+- **Queried by:** work-ready script, subsession-complete validation
+
+### Learning Extraction Workflow
+
+```
+During subsession:
+  scratchpads/subsession-N.md  ← active thinking
+  worklog.md                   ← decision log
+
+At subsession completion:
+  scratchpad + worklog → _AGENTS/knowledge/learnings.md
+  (Extract patterns, reusable solutions, pitfalls avoided)
+
+At session completion:
+  learnings.md → new kb-* sessions in drafting/
+  (Transform learnings into actionable knowledge base improvements)
+```
+
+### Relationship Between Files
+
+```
+SESSION.md (read-only)
+  ↓ defines
+bd issues (WHAT to do)
+  ↓ worked on via
+scratchpads/subsession-N.md (HOW thinking)
+  ↓ decisions logged in
+worklog.md (WHEN/WHY decisions)
+  ↓ combined into
+learnings.md (KB extraction)
+  ↓ becomes
+kb-* sessions (Knowledge improvement)
+```
+
 ## Acceptance Criteria
 
 ### Infrastructure
@@ -41,13 +120,14 @@ Preserve:
 - [ ] .gitignore updated appropriately
 
 ### Scripts Updated
-- [ ] session-claim: Initialize bd in worktree
-- [ ] session-complete: Validate bd state, create KB session
-- [ ] session-abort: Close all bd issues, cleanup
-- [ ] subsession-start: Create TDD structure in bd
-- [ ] subsession-complete: Archive scratchpad, extract learnings
-- [ ] subsession-abort: Archive and mark cancelled
+- [ ] session-claim: Initialize bd in worktree, create scratchpads/ directory, set SESSION.md read-only
+- [ ] session-complete: Validate bd state, extract learnings → kb-* sessions, restore SESSION.md writeable
+- [ ] session-abort: Close all bd issues, cleanup, restore SESSION.md writeable
+- [ ] subsession-start: Create TDD structure in bd, initialize scratchpad
+- [ ] subsession-complete: Archive scratchpad, combine with worklog → learnings.md
+- [ ] subsession-abort: Archive scratchpad, mark cancelled in bd
 - [ ] work-ready: Context-aware query (session/subsession/all)
+- [ ] Scripts prompt for worklog updates when bd issues created/completed
 
 ### Knowledge Base
 - [ ] Create `_AGENTS/knowledge/bd/` directory
@@ -69,8 +149,11 @@ Preserve:
 - [ ] Multi-subsession dependencies work correctly
 - [ ] TDD enforcement verified (blocking structure)
 - [ ] work-ready queries return correct context
-- [ ] Scratchpad lifecycle works (archive, extract)
-- [ ] KB learnings extraction functional
+- [ ] Scratchpads/ directory structure correct (one per subsession)
+- [ ] Scratchpad lifecycle works (create, update, archive)
+- [ ] Worklog captures bd issue creation/completion with rationale
+- [ ] Learning extraction functional (scratchpad + worklog → learnings.md)
+- [ ] Session completion creates kb-* sessions from learnings
 
 ### Migration
 - [ ] Migration guide for existing sessions (optional)
@@ -113,26 +196,40 @@ Create `_AGENTS/knowledge/bd/` with:
 ### Phase 4: Documentation
 1. Update SESSIONS-README.md:
    - Add bd to "Directory Structure"
-   - Update "Session Contents" to include .beads/
+   - Update "Session Contents" to include .beads/ and scratchpads/
+   - Document SESSION.md (read-only), worklog.md (WHEN/WHY), scratchpads/ (per-subsession)
    - Add subsession workflow with bd examples
+   - Document learning extraction workflow
 2. Create BD-INTEGRATION.md:
    - Label conventions
    - Query patterns
    - Common workflows
+   - Scratchpad and worklog best practices
 3. Update SESSIONS-REFERENCE.md:
    - Add bd command examples
+   - Document scratchpad lifecycle
+   - Document worklog update patterns
    - Troubleshooting section
 
 ### Phase 5: Validation
 1. Create test session in drafting/
 2. Run through complete lifecycle:
-   - Claim session
+   - Claim session (verify scratchpads/ directory created)
    - Create 3 subsessions with dependencies
+   - For each subsession:
+     - Verify scratchpad created
+     - Update scratchpad with thinking/obstacles
+     - Log decisions in worklog.md (with bd issue references)
    - Work through TDD cycles
-   - Archive scratchpads
-   - Extract learnings
-   - Complete session
-3. Verify all artifacts correct
+   - Complete subsessions (verify scratchpad archived, learnings extracted)
+   - Complete session (verify kb-* sessions created from learnings)
+3. Verify all artifacts correct:
+   - SESSION.md unchanged and read-only in active/
+   - SESSION.md writeable after session-complete in completed/
+   - worklog.md has chronological entries with WHEN/WHY
+   - scratchpads/ has one file per subsession (archived)
+   - learnings.md exists in KB
+   - kb-* session created in drafting/
 
 ## Out of Scope
 
@@ -183,6 +280,10 @@ Create `_AGENTS/knowledge/bd/` with:
 - Preserve existing session artifacts structure
 - Test with multiple concurrent sessions
 - KB should be comprehensive enough that agents can learn bd from scratch
+- SESSION.md is made read-only by session-claim, writeable by session-complete/abort - enforces session contract
+- Worklog.md is the "why" companion to bd's "what" - don't duplicate task lists
+- Scratchpads/ replace active-plan.md - one per subsession, not session-wide
+- Learning extraction is a two-phase process: subsession → learnings.md, session → kb-* sessions
 
 ## Subsessions (Proposed)
 
