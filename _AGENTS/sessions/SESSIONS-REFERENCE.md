@@ -67,8 +67,8 @@ Completes a session and merges to main.
 ```
 
 **What it does:**
-1. Generates patch file in session directory
-2. Checks for KB learnings and creates KB merge session if found
+1. Generates patch file in session directory (`{session-slug}.patch`)
+2. Checks for KB learnings and creates KB merge session in `drafting/` if found
 3. Moves session from `active/` to `completed/`
 4. Merges session branch to main via squash merge
 5. Deletes session branch
@@ -77,7 +77,7 @@ Completes a session and merges to main.
 **KB Merge Session Creation:**
 - Automatically creates `kb-{date}-merge-{topic}` session if learnings exist
 - Uses template from `_templates/kb-merge-SESSION.md`
-- Places in `sessions/planned/` for any session to claim
+- Places in `sessions/drafting/` for user review before moving to `planned/`
 
 ---
 
@@ -188,6 +188,13 @@ git commit -m "[2025-10-14-auth-system] docs: capture learnings"
 cd ../../..  # Back to repo root
 ./_bin/complete-session 2025-10-14-auth-system
 
+# The script automatically:
+# - Generates patch file: sessions/completed/2025-10-14-auth-system/2025-10-14-auth-system.patch
+# - Creates KB merge session in drafting/ if learnings exist
+# - Moves session to completed/
+# - Merges session branch to main
+# - Deletes session branch
+
 # 2. Deactivate environment
 unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
 unset SESSION_SLUG SESSION_BRANCH PS1
@@ -226,23 +233,32 @@ fi
 #### Manual Completion Process
 
 ```bash
-# 1. Generate patch
+# 1. Generate patch file
 cd sessions/active/2025-10-14-auth-system
 git format-patch main --stdout > 2025-10-14-auth-system.patch
+echo "✅ Patch file created: 2025-10-14-auth-system.patch"
 
-# 2. Move to completed
+# 2. Check for KB learnings and create KB merge session if exists
+if [ -f "_AGENTS/knowledge/sessions/2025-10-14-auth-system/learnings.md" ]; then
+  echo "📚 KB learnings found, creating KB merge session in drafting/..."
+  # [KB merge session creation logic]
+fi
+
+# 3. Move to completed
 cd ../../..
 mv sessions/active/2025-10-14-auth-system sessions/completed/
+echo "✅ Session moved to completed/"
 
-# 3. Merge to main
+# 4. Merge to main
 git checkout main
 git pull origin main
 git merge --squash session/2025-10-14-auth-system
-git commit -m "[cursor-1] Session complete: 2025-10-14-auth-system"
+git commit -m "[2025-10-14-auth-system] Session complete: 2025-10-14-auth-system"
 git push origin main
 
-# 4. Cleanup
+# 5. Cleanup
 git branch -d session/2025-10-14-auth-system
+echo "✅ Session branch deleted"
 ```
 
 ---
@@ -397,8 +413,10 @@ flowchart TD
     Learnings["Session Learnings"] --> Check{"KB Learnings Exist?"}
     Check -->|"Yes"| CreateKB["Create KB Merge Session"]
     Check -->|"No"| Complete["Complete Session"]
-    CreateKB --> PlacePlanned["Place in planned/"]
-    PlacePlanned --> Complete
+    CreateKB --> PlaceDrafting["Place in drafting/"]
+    PlaceDrafting --> UserReview["User Review"]
+    UserReview --> MovePlanned["Move to planned/"]
+    MovePlanned --> Complete
     Complete --> Merge["Merge to Main"]
 ```
 
