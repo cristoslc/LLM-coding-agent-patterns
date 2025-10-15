@@ -139,6 +139,7 @@ sed -e "s/{{AGENT_ID}}/cursor-1/g" \
 ```bash
 # 1. Claim and activate session
 ./_bin/claim-session 2025-10-14-auth-system
+# Note: SESSION.md becomes read-only to preserve original plan
 
 # 2. Activate session environment (in worktree)
 cd .worktrees/2025-10-14-auth-system
@@ -235,8 +236,13 @@ if git push origin main; then
   mv sessions/planned/2025-10-14-auth-system sessions/active/
   git add sessions/
   git commit -m "[2025-10-14-auth-system] Move to active"
+
+  # 7. Set SESSION.md to read-only
+  chmod 444 sessions/active/2025-10-14-auth-system/SESSION.md
+  git add sessions/active/2025-10-14-auth-system/SESSION.md
+  git commit -m "[2025-10-14-auth-system] Set SESSION.md read-only"
   
-  # 7. Create .session-env and commit
+  # 8. Create .session-env and commit
   cat > sessions/active/2025-10-14-auth-system/.session-env << 'EOF'
 export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
 export GIT_AUTHOR_EMAIL="cristos+2025-10-14-auth-system@agents.local"
@@ -247,8 +253,8 @@ export SESSION_SLUG="2025-10-14-auth-system"
 EOF
   git add sessions/active/2025-10-14-auth-system/.session-env
   git commit -m "[2025-10-14-auth-system] Add session environment"
-  
-  # 8. Create worktree with session branch
+
+  # 9. Create worktree with session branch
   git worktree add -b session/2025-10-14-auth-system .worktrees/2025-10-14-auth-system HEAD
   echo "✅ Worktree created at .worktrees/2025-10-14-auth-system"
   echo "Activate: cd .worktrees/2025-10-14-auth-system && source ../../sessions/active/2025-10-14-auth-system/.session-env"
@@ -283,15 +289,25 @@ git merge --squash session/2025-10-14-auth-system
 git commit -m "[2025-10-14-auth-system] Session complete: 2025-10-14-auth-system"
 git push origin main
 
-# 5. Remove from lock and move to completed
+# 5. Unlock SESSION.md for final updates
+chmod 644 sessions/active/2025-10-14-auth-system/SESSION.md
+git add sessions/active/2025-10-14-auth-system/SESSION.md
+git commit -m "[2025-10-14-auth-system] Unlock SESSION.md for final updates"
+
+# 6. Remove from lock and move to completed
 sed -i '/^2025-10-14-auth-system:/d' .agents/sessions.lock
 git add .agents/sessions.lock
 mv sessions/active/2025-10-14-auth-system sessions/completed/
 git add sessions/
 git commit -m "[2025-10-14-auth-system] Archive session"
+
+# 7. Set SESSION.md back to read-only in completed
+chmod 444 sessions/completed/2025-10-14-auth-system/SESSION.md
+git add sessions/completed/2025-10-14-auth-system/SESSION.md
+git commit -m "[2025-10-14-auth-system] Set SESSION.md read-only in completed"
 git push origin main
 
-# 6. Cleanup
+# 8. Cleanup
 git branch -d session/2025-10-14-auth-system
 echo "✅ Session branch deleted"
 ```
@@ -665,6 +681,52 @@ git commit --amend --reset-author --no-edit
 git checkout --ours sessions/active/your-session/worklog.md
 git add sessions/
 git commit -m "[your-session-id] Resolve session files conflict"
+```
+
+### SESSION.md Permission Issues
+
+**Problem:** Can't edit SESSION.md during active session.
+
+**Solution:**
+```bash
+# This is expected behavior! SESSION.md is read-only during active work.
+# Use these files instead for updates:
+echo "## [2025-10-14 15:30] Progress update" >> sessions/active/your-session/worklog.md
+echo "- [ ] New task added" >> sessions/active/your-session/active-plan.md
+git add sessions/active/your-session/
+git commit -m "[your-session-id] docs: update progress"
+```
+
+**Problem:** Need to make critical fix to SESSION.md (emergency only).
+
+**Solution:**
+```bash
+# Emergency override only - document reason in worklog first
+chmod 644 sessions/active/your-session/SESSION.md
+# Make critical fix
+git add sessions/active/your-session/SESSION.md
+git commit -m "[your-session-id] OVERRIDE: Fix critical SESSION.md error"
+chmod 444 sessions/active/your-session/SESSION.md
+
+# Document override reason in worklog
+echo "## OVERRIDE: SESSION.md Emergency Edit" >> sessions/active/your-session/worklog.md
+echo "Reason: [explain critical issue]" >> sessions/active/your-session/worklog.md
+echo "Fixed: [what was changed]" >> sessions/active/your-session/worklog.md
+git add sessions/active/your-session/worklog.md
+git commit -m "[your-session-id] docs: document SESSION.md override"
+```
+
+**Problem:** complete-session fails due to permission issues.
+
+**Solution:**
+```bash
+# Check if file permissions are blocking the script
+ls -la sessions/active/your-session/SESSION.md
+
+# Manual unlock if script fails
+chmod 644 sessions/active/your-session/SESSION.md
+# Run completion again
+./_bin/complete-session your-session
 ```
 
 ---
