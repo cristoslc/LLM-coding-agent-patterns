@@ -95,9 +95,8 @@ Template for standard sessions with comprehensive structure and protocol complia
 - `SESSION_SLUG` - Session identifier (e.g., "2025-10-14-auth-system")
 - `CONTEXT` - Brief description of what needs to be done
 - `PROBLEM_STATEMENT` - Detailed analysis of the problem with specific examples
-- `ACCEPTANCE_CRITERIA` - List of specific, measurable criteria
+- `ACCEPTANCE_CRITERIA` - Comprehensive list combining specific requirements and success metrics
 - `IMPLEMENTATION_PLAN` - Flexible step-by-step execution plan
-- `SUCCESS_METRICS` - How to measure success with specific examples
 - `RISKS` - Potential risks and mitigation strategies with impact assessment
 - `DEPENDENCIES` - Required resources and knowledge
 - `EDGE_CASES` - Specific edge cases to consider
@@ -138,12 +137,16 @@ The current implementation of the session management scripts has several reliabi
 - Consistency Issues: Different approaches to handle file permissions, inconsistent error handling, inconsistent user feedback
 
 ## Acceptance Criteria
-- [ ] Add error handling for all file operations in both scripts
-- [ ] Add validation for all git operations in both scripts
-- [ ] Ensure consistency in error handling and user feedback
-- [ ] Add documentation for both scripts
-- [ ] Add tests for both scripts to ensure they work as expected in all edge cases
-- [ ] Verify that both scripts work correctly in all edge cases
+- [ ] Script handles missing .agents/sessions.lock file with clear error message and recovery instructions
+- [ ] Script validates SESSION.md exists before proceeding, exits gracefully with helpful message if not found
+- [ ] Script checks if session branch already exists and prevents duplicate creation
+- [ ] Script verifies worktree directory doesn't exist before creation, cleans up on failure
+- [ ] Both scripts use consistent error message format: "[ERROR] <context>: <problem>. Try: <suggestion>"
+- [ ] Both scripts provide consistent success output showing next steps for the user
+- [ ] Documentation includes at least 3 common error scenarios with troubleshooting steps
+- [ ] Test suite validates behavior for at least 5 identified edge cases (missing files, permissions, conflicts, etc.)
+- [ ] Scripts complete successfully in clean repository state without any manual intervention
+- [ ] Scripts handle git operation failures (network issues, permissions) with clear error messages and no corrupt state
 
 ## Implementation Plan
 1. Review both scripts to identify all potential edge cases
@@ -154,12 +157,6 @@ The current implementation of the session management scripts has several reliabi
 6. Add tests for both scripts
 7. Verify that both scripts work correctly in all edge cases
 8. Create KB merge session if needed
-
-## Success Metrics
-- Zero unhandled errors in both scripts
-- Consistent error handling patterns across scripts
-- Comprehensive test coverage (>90% of code paths)
-- All edge cases handled gracefully
 
 ## Risks & Mitigations
 - **Risk:** Changes might break existing session workflows

@@ -34,13 +34,32 @@
 {% for criterion in ACCEPTANCE_CRITERIA %}
 - [ ] {{ criterion }}
 {% endfor %}
-{# Example:
-- [ ] Add error handling for all file operations in both scripts
-- [ ] Add validation for all git operations in both scripts
-- [ ] Ensure consistency in error handling and user feedback
-- [ ] Add documentation for both scripts
-- [ ] Add tests for both scripts to ensure they work as expected in all edge cases
-- [ ] Verify that both scripts work correctly in all edge cases
+{# Example - Combine what must be done with how we measure success.
+   Make criteria specific, measurable, testable, and outcome-focused:
+
+**Functional Requirements:**
+- [ ] Script handles missing .agents/sessions.lock file with clear error message and recovery instructions
+- [ ] Script validates SESSION.md exists before proceeding, exits gracefully with helpful message if not found
+- [ ] Script checks if session branch already exists and prevents duplicate creation
+- [ ] Script verifies worktree directory doesn't exist before creation, cleans up on failure
+- [ ] Both scripts use consistent error message format: "[ERROR] <context>: <problem>. Try: <suggestion>"
+- [ ] Both scripts provide consistent success output showing next steps for the user
+
+**Quality Metrics:**
+- [ ] Zero unhandled errors in both scripts (all error paths have explicit handling)
+- [ ] Test suite validates behavior for at least 5 identified edge cases (missing files, permissions, conflicts, network, disk space)
+- [ ] Test coverage >90% of code paths including error scenarios
+- [ ] Scripts complete successfully in clean repository state without any manual intervention
+
+**Documentation:**
+- [ ] Documentation includes at least 3 common error scenarios with troubleshooting steps
+- [ ] All error messages reference specific documentation sections for recovery
+
+**Robustness:**
+- [ ] Scripts handle git operation failures (network issues, permissions) with clear error messages and no corrupt state
+- [ ] Scripts clean up partial state on failure (no orphaned worktrees, branches, or lock entries)
+
+Note: Group related criteria and focus on observable outcomes rather than activities like "add error handling"
 #}
 
 ## Implementation Plan
@@ -54,15 +73,6 @@
 6. Add tests for both scripts
 7. Verify that both scripts work correctly in all edge cases
 8. Create KB merge session if needed
-#}
-
-## Success Metrics
-{{ SUCCESS_METRICS }}
-{# Example:
-- Zero unhandled errors in both scripts
-- Consistent error handling patterns across scripts
-- Comprehensive test coverage (>90% of code paths)
-- All edge cases handled gracefully
 #}
 
 ## Risks & Mitigations

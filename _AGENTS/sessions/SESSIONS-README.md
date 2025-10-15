@@ -357,9 +357,9 @@ Format: `[{session-id}] <type>: <description>`
 The `_templates/` directory provides Jinja2 templates for creating consistent session files:
 
 **`SESSION.md.j2`** - Standard session template with comprehensive structure:
-- **Variables**: `SESSION_SLUG`, `CONTEXT`, `PROBLEM_STATEMENT`, `ACCEPTANCE_CRITERIA`, `IMPLEMENTATION_PLAN`, `SUCCESS_METRICS`, `RISKS`, `DEPENDENCIES`
+- **Variables**: `SESSION_SLUG`, `CONTEXT`, `PROBLEM_STATEMENT`, `ACCEPTANCE_CRITERIA`, `IMPLEMENTATION_PLAN`, `RISKS`, `DEPENDENCIES`, `EDGE_CASES`, `NOTES`
 - **Usage**: Automatically used by session creation tools, or manually with template substitution
-- **Structure**: Includes context, problem analysis, phased implementation plan, success metrics, risk mitigation, and edge case considerations
+- **Structure**: Includes context, problem analysis, comprehensive acceptance criteria (combining requirements and success metrics), implementation plan, risk mitigation, dependencies, and edge case considerations
 
 **`kb-merge-SESSION.md.j2`** - KB merge session template:
 - **Variables**: `TOPIC`, `SOURCE_SESSION`, `TIMESTAMP`
