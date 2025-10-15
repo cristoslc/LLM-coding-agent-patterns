@@ -60,9 +60,9 @@ Coordination through **git** (no orchestrator):
 # Claim and activate session
 ./_bin/claim-session 2025-10-14-feature-x
 
-# Activate session environment
-cd sessions/active/2025-10-14-feature-x
-source .session-env
+# Activate session environment (in worktree)
+cd .worktrees/2025-10-14-feature-x
+source ../../sessions/active/2025-10-14-feature-x/.session-env
 
 # Work on session...
 
@@ -85,6 +85,7 @@ git push origin main  # If fails, pick different session
 
 # 2. Move to active and create activation file
 mv sessions/planned/2025-10-14-feature-x sessions/active/
+git add sessions/ && git commit -m "[2025-10-14-feature-x] Move to active"
 
 cat > sessions/active/2025-10-14-feature-x/.session-env << 'EOF'
 export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
@@ -95,20 +96,27 @@ export SESSION_ID="2025-10-14-feature-x"
 export SESSION_SLUG="2025-10-14-feature-x"
 EOF
 
-# 3. Create branch and activate session
-git checkout -b session/2025-10-14-feature-x
-cd sessions/active/2025-10-14-feature-x
-source .session-env
+git add sessions/active/2025-10-14-feature-x/.session-env
+git commit -m "[2025-10-14-feature-x] Add session environment"
 
-# 4. Start work!
+# 3. Create worktree with session branch (outside sessions/)
+git worktree add -b session/2025-10-14-feature-x \
+  .worktrees/2025-10-14-feature-x \
+  HEAD
+
+# 4. Activate session and start work
+cd .worktrees/2025-10-14-feature-x
+source ../../sessions/active/2025-10-14-feature-x/.session-env
+
+# Now working in isolated worktree!
 ```
 
 #### Completing a Session
 
 ```bash
 # 1. Finalize documentation (worklog, active-plan, generate patch)
-cd sessions/active/2025-10-14-feature-x
-git format-patch main --stdout > 2025-10-14-feature-x.patch
+cd .worktrees/2025-10-14-feature-x
+git format-patch main --stdout > ../../sessions/active/2025-10-14-feature-x/2025-10-14-feature-x.patch
 
 # 2. Check for KB learnings and create KB merge session if exists
 if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
@@ -116,13 +124,11 @@ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
   # [Use KB merge session template]
 fi
 
-# 3. Move to completed and deactivate
-cd ../../..  # Back to repo root
-mv sessions/active/2025-10-14-feature-x sessions/completed/
-git add sessions/ && git commit -m "[2025-10-14-feature-x] Complete session"
+# 3. Return to main repo and remove worktree
+cd ../..  # Back to repo root
+git worktree remove .worktrees/2025-10-14-feature-x
 
 # 4. Merge to main
-git checkout main
 git pull origin main
 git merge --squash session/2025-10-14-feature-x
 git commit -m "[2025-10-14-feature-x] Session complete: Implement user authentication system
@@ -142,10 +148,17 @@ Session artifacts:
 - KB learnings: _AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md"
 git push origin main
 
-# 5. Cleanup and deactivate
+# 5. Remove session from lock and move to completed
+sed -i '/^2025-10-14-feature-x:/d' .agents/sessions.lock
+git add .agents/sessions.lock
+mv sessions/active/2025-10-14-feature-x sessions/completed/
+git add sessions/ && git commit -m "[2025-10-14-feature-x] Archive session"
+git push origin main
+
+# 6. Cleanup branch and deactivate
 git branch -d session/2025-10-14-feature-x
 unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
-unset SESSION_SLUG SESSION_BRANCH
+unset SESSION_SLUG SESSION_ID
 
 # Session context ended
 ```
@@ -158,7 +171,7 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete 
 
 1. **Git as Coordinator** - Use git itself for synchronization (no external orchestrator)
 2. **Session-Scoped Activation** - Agent identity via environment variables, session lifecycle
-3. **Namespace Isolation** - Each agent works in separate directories/branches
+3. **Namespace Isolation** - Each session works in separate worktrees/branches
 4. **Optimistic Locking** - Session claims via atomic git operations
 5. **Full Traceability** - Every commit attributed to specific agent
 6. **Two-Phase Knowledge** - Capture learnings fast, merge deliberately via KB sessions
@@ -166,6 +179,14 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete 
 ### Directory Structure
 
 ```
+.agents/
+└── sessions.lock    # Active session claims (session-id:timestamp)
+
+.worktrees/          # Git worktrees (isolated workspaces)
+├── 2025-10-14-auth-system/     # Full repo copy for this session
+├── 2025-10-14-api-work/        # Full repo copy for this session
+└── ...
+
 sessions/
 ├── _bin/            # Utility scripts
 │   ├── claim-session
@@ -176,8 +197,12 @@ sessions/
 ├── SESSIONS-README.md        # This file (essential protocol)
 ├── SESSIONS-REFERENCE.md     # Detailed examples & commands
 ├── abandoned/       # Cancelled/incomplete sessions
-├── active/          # Currently active sessions
+├── active/          # Currently active sessions (metadata only)
 │   ├── 2025-10-14-auth-system/
+│   │   ├── .session-env
+│   │   ├── SESSION.md
+│   │   ├── worklog.md
+│   │   └── active-plan.md
 │   ├── 2025-10-14-api-work/
 │   └── ...
 ├── completed/       # Finished sessions (all agents)
@@ -208,15 +233,16 @@ Agent identity is established per-session via environment variables. The `claim-
 3. Add claim: `echo "{session-slug}:$(date +%s)" >> .agents/sessions.lock`
 4. Commit and push: `git commit -m "[2025-10-14-feature-x] Claim session" && git push`
 5. If push fails (race condition), pick different session
-6. Move session to `active/{session-slug}/`
-7. Create `.session-env` file in session directory
-8. Create session branch and activate: `source .session-env`
+6. Move session to `active/{session-slug}/` and commit
+7. Create `.session-env` file in session directory and commit
+8. Create worktree with session branch: `git worktree add -b session/{slug} .worktrees/{slug}`
+9. Activate session in worktree: `source ../../sessions/active/{slug}/.session-env`
 
 **Activation:**
 
 ```bash
-cd sessions/active/{session-slug}
-source .session-env
+cd .worktrees/{session-slug}
+source ../../sessions/active/{session-slug}/.session-env
 ```
 
 Session activation sets git identity and environment for that session only. The `.session-env` file contains all environment variables for this session's agent identity.
@@ -353,7 +379,7 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 ### Multi-Agent Specific
 5. **Always pull before claiming** - Get latest state first
 6. **Handle race conditions gracefully** - Pick different session if claim fails
-7. **Namespace everything** - Use `active/{session-slug}/` and `session/{session-id}`
+7. **Namespace everything** - Use `.worktrees/{session-slug}/` and `session/{session-id}`
 8. **Session-prefixed commits** - Every commit tagged with `[{session-id}]`
 9. **KB learnings are session-scoped** - Never write directly to `knowledge/`
 10. **Create KB merge sessions** - Auto-generate at session completion

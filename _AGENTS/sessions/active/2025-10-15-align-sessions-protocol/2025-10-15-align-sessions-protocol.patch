@@ -1,0 +1,964 @@
+From fc5ef455f3ffc606940cbdb961dc887c5751f612 Mon Sep 17 00:00:00 2001
+From: Cristos Lianides-Chin <Cristos@CristosLC.com>
+Date: Tue, 14 Oct 2025 22:01:56 -0400
+Subject: [PATCH 1/3] [2025-10-15-align-sessions-protocol] Activate session
+
+---
+ .../active/2025-10-15-align-sessions-protocol/.session-env  | 6 ++++++
+ .../2025-10-15-align-sessions-protocol/SESSION.md           | 0
+ .../2025-10-15-align-sessions-protocol/active-plan.md       | 0
+ .../2025-10-15-align-sessions-protocol/worklog.md           | 0
+ 4 files changed, 6 insertions(+)
+ create mode 100644 _AGENTS/sessions/active/2025-10-15-align-sessions-protocol/.session-env
+ rename _AGENTS/sessions/{planned => active}/2025-10-15-align-sessions-protocol/SESSION.md (100%)
+ rename _AGENTS/sessions/{planned => active}/2025-10-15-align-sessions-protocol/active-plan.md (100%)
+ rename _AGENTS/sessions/{planned => active}/2025-10-15-align-sessions-protocol/worklog.md (100%)
+
+diff --git a/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/.session-env b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/.session-env
+new file mode 100644
+index 0000000..5cd06c1
+--- /dev/null
++++ b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/.session-env
+@@ -0,0 +1,6 @@
++export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
++export GIT_AUTHOR_EMAIL="cristos+2025-10-15-align-sessions-protocol@agents.local"
++export GIT_COMMITTER_NAME="Session-2025-10-15-align-sessions-protocol (via cristos)"
++export GIT_COMMITTER_EMAIL="cristos+2025-10-15-align-sessions-protocol@agents.local"
++export SESSION_ID="2025-10-15-align-sessions-protocol"
++export SESSION_SLUG="2025-10-15-align-sessions-protocol"
+diff --git a/_AGENTS/sessions/planned/2025-10-15-align-sessions-protocol/SESSION.md b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/SESSION.md
+similarity index 100%
+rename from _AGENTS/sessions/planned/2025-10-15-align-sessions-protocol/SESSION.md
+rename to _AGENTS/sessions/active/2025-10-15-align-sessions-protocol/SESSION.md
+diff --git a/_AGENTS/sessions/planned/2025-10-15-align-sessions-protocol/active-plan.md b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/active-plan.md
+similarity index 100%
+rename from _AGENTS/sessions/planned/2025-10-15-align-sessions-protocol/active-plan.md
+rename to _AGENTS/sessions/active/2025-10-15-align-sessions-protocol/active-plan.md
+diff --git a/_AGENTS/sessions/planned/2025-10-15-align-sessions-protocol/worklog.md b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md
+similarity index 100%
+rename from _AGENTS/sessions/planned/2025-10-15-align-sessions-protocol/worklog.md
+rename to _AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md
+-- 
+2.43.0
+
+
+From aba23f4ad2c9de0de1828eed6b9a1921e6f190d5 Mon Sep 17 00:00:00 2001
+From: "Cursor-Local-1 (via cristos)"
+ <cristos+2025-10-15-align-sessions-protocol@agents.local>
+Date: Tue, 14 Oct 2025 22:17:25 -0400
+Subject: [PATCH 2/3] [2025-10-15-align-sessions-protocol] docs: migrate to
+ worktree-based workflow with session lock cleanup
+
+---
+ .gitignore                                    |   2 +
+ _AGENTS/sessions/SESSIONS-README.md           |  76 ++++---
+ _AGENTS/sessions/SESSIONS-REFERENCE.md        | 198 ++++++++++++------
+ .../worklog.md                                | 122 ++++++++++-
+ 4 files changed, 308 insertions(+), 90 deletions(-)
+ create mode 100644 .gitignore
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..d9a7359
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,2 @@
++# Git worktrees for sessions
++.worktrees/
+diff --git a/_AGENTS/sessions/SESSIONS-README.md b/_AGENTS/sessions/SESSIONS-README.md
+index 8358d52..090f96b 100644
+--- a/_AGENTS/sessions/SESSIONS-README.md
++++ b/_AGENTS/sessions/SESSIONS-README.md
+@@ -60,9 +60,9 @@ Coordination through **git** (no orchestrator):
+ # Claim and activate session
+ ./_bin/claim-session 2025-10-14-feature-x
+ 
+-# Activate session environment
+-cd sessions/active/2025-10-14-feature-x
+-source .session-env
++# Activate session environment (in worktree)
++cd .worktrees/2025-10-14-feature-x
++source ../../sessions/active/2025-10-14-feature-x/.session-env
+ 
+ # Work on session...
+ 
+@@ -85,6 +85,7 @@ git push origin main  # If fails, pick different session
+ 
+ # 2. Move to active and create activation file
+ mv sessions/planned/2025-10-14-feature-x sessions/active/
++git add sessions/ && git commit -m "[2025-10-14-feature-x] Move to active"
+ 
+ cat > sessions/active/2025-10-14-feature-x/.session-env << 'EOF'
+ export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
+@@ -95,20 +96,27 @@ export SESSION_ID="2025-10-14-feature-x"
+ export SESSION_SLUG="2025-10-14-feature-x"
+ EOF
+ 
+-# 3. Create branch and activate session
+-git checkout -b session/2025-10-14-feature-x
+-cd sessions/active/2025-10-14-feature-x
+-source .session-env
++git add sessions/active/2025-10-14-feature-x/.session-env
++git commit -m "[2025-10-14-feature-x] Add session environment"
+ 
+-# 4. Start work!
++# 3. Create worktree with session branch (outside sessions/)
++git worktree add -b session/2025-10-14-feature-x \
++  .worktrees/2025-10-14-feature-x \
++  HEAD
++
++# 4. Activate session and start work
++cd .worktrees/2025-10-14-feature-x
++source ../../sessions/active/2025-10-14-feature-x/.session-env
++
++# Now working in isolated worktree!
+ ```
+ 
+ #### Completing a Session
+ 
+ ```bash
+ # 1. Finalize documentation (worklog, active-plan, generate patch)
+-cd sessions/active/2025-10-14-feature-x
+-git format-patch main --stdout > 2025-10-14-feature-x.patch
++cd .worktrees/2025-10-14-feature-x
++git format-patch main --stdout > ../../sessions/active/2025-10-14-feature-x/2025-10-14-feature-x.patch
+ 
+ # 2. Check for KB learnings and create KB merge session if exists
+ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
+@@ -116,13 +124,11 @@ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
+   # [Use KB merge session template]
+ fi
+ 
+-# 3. Move to completed and deactivate
+-cd ../../..  # Back to repo root
+-mv sessions/active/2025-10-14-feature-x sessions/completed/
+-git add sessions/ && git commit -m "[2025-10-14-feature-x] Complete session"
++# 3. Return to main repo and remove worktree
++cd ../..  # Back to repo root
++git worktree remove .worktrees/2025-10-14-feature-x
+ 
+ # 4. Merge to main
+-git checkout main
+ git pull origin main
+ git merge --squash session/2025-10-14-feature-x
+ git commit -m "[2025-10-14-feature-x] Session complete: Implement user authentication system
+@@ -142,10 +148,17 @@ Session artifacts:
+ - KB learnings: _AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md"
+ git push origin main
+ 
+-# 5. Cleanup and deactivate
++# 5. Remove session from lock and move to completed
++sed -i '/^2025-10-14-feature-x:/d' .agents/sessions.lock
++git add .agents/sessions.lock
++mv sessions/active/2025-10-14-feature-x sessions/completed/
++git add sessions/ && git commit -m "[2025-10-14-feature-x] Archive session"
++git push origin main
++
++# 6. Cleanup branch and deactivate
+ git branch -d session/2025-10-14-feature-x
+ unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+-unset SESSION_SLUG SESSION_BRANCH
++unset SESSION_SLUG SESSION_ID
+ 
+ # Session context ended
+ ```
+@@ -158,7 +171,7 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete
+ 
+ 1. **Git as Coordinator** - Use git itself for synchronization (no external orchestrator)
+ 2. **Session-Scoped Activation** - Agent identity via environment variables, session lifecycle
+-3. **Namespace Isolation** - Each agent works in separate directories/branches
++3. **Namespace Isolation** - Each session works in separate worktrees/branches
+ 4. **Optimistic Locking** - Session claims via atomic git operations
+ 5. **Full Traceability** - Every commit attributed to specific agent
+ 6. **Two-Phase Knowledge** - Capture learnings fast, merge deliberately via KB sessions
+@@ -166,6 +179,14 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete
+ ### Directory Structure
+ 
+ ```
++.agents/
++└── sessions.lock    # Active session claims (session-id:timestamp)
++
++.worktrees/          # Git worktrees (isolated workspaces)
++├── 2025-10-14-auth-system/     # Full repo copy for this session
++├── 2025-10-14-api-work/        # Full repo copy for this session
++└── ...
++
+ sessions/
+ ├── _bin/            # Utility scripts
+ │   ├── claim-session
+@@ -176,8 +197,12 @@ sessions/
+ ├── SESSIONS-README.md        # This file (essential protocol)
+ ├── SESSIONS-REFERENCE.md     # Detailed examples & commands
+ ├── abandoned/       # Cancelled/incomplete sessions
+-├── active/          # Currently active sessions
++├── active/          # Currently active sessions (metadata only)
+ │   ├── 2025-10-14-auth-system/
++│   │   ├── .session-env
++│   │   ├── SESSION.md
++│   │   ├── worklog.md
++│   │   └── active-plan.md
+ │   ├── 2025-10-14-api-work/
+ │   └── ...
+ ├── completed/       # Finished sessions (all agents)
+@@ -208,15 +233,16 @@ Agent identity is established per-session via environment variables. The `claim-
+ 3. Add claim: `echo "{session-slug}:$(date +%s)" >> .agents/sessions.lock`
+ 4. Commit and push: `git commit -m "[2025-10-14-feature-x] Claim session" && git push`
+ 5. If push fails (race condition), pick different session
+-6. Move session to `active/{session-slug}/`
+-7. Create `.session-env` file in session directory
+-8. Create session branch and activate: `source .session-env`
++6. Move session to `active/{session-slug}/` and commit
++7. Create `.session-env` file in session directory and commit
++8. Create worktree with session branch: `git worktree add -b session/{slug} .worktrees/{slug}`
++9. Activate session in worktree: `source ../../sessions/active/{slug}/.session-env`
+ 
+ **Activation:**
+ 
+ ```bash
+-cd sessions/active/{session-slug}
+-source .session-env
++cd .worktrees/{session-slug}
++source ../../sessions/active/{session-slug}/.session-env
+ ```
+ 
+ Session activation sets git identity and environment for that session only. The `.session-env` file contains all environment variables for this session's agent identity.
+@@ -353,7 +379,7 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples)
+ ### Multi-Agent Specific
+ 5. **Always pull before claiming** - Get latest state first
+ 6. **Handle race conditions gracefully** - Pick different session if claim fails
+-7. **Namespace everything** - Use `active/{session-slug}/` and `session/{session-id}`
++7. **Namespace everything** - Use `.worktrees/{session-slug}/` and `session/{session-id}`
+ 8. **Session-prefixed commits** - Every commit tagged with `[{session-id}]`
+ 9. **KB learnings are session-scoped** - Never write directly to `knowledge/`
+ 10. **Create KB merge sessions** - Auto-generate at session completion
+diff --git a/_AGENTS/sessions/SESSIONS-REFERENCE.md b/_AGENTS/sessions/SESSIONS-REFERENCE.md
+index ca614b1..11b4b12 100644
+--- a/_AGENTS/sessions/SESSIONS-REFERENCE.md
++++ b/_AGENTS/sessions/SESSIONS-REFERENCE.md
+@@ -40,10 +40,10 @@ Claims and activates a session atomically.
+ 1. Pulls latest git state
+ 2. Checks session availability in `.agents/sessions.lock`
+ 3. Claims session atomically via git push
+-4. Moves session from `planned/` to `active/`
+-5. Creates `.session-env` file with session identity
+-6. Creates session branch `session/{session-slug}`
+-7. Provides activation instructions
++4. Moves session from `planned/` to `active/` and commits
++5. Creates `.session-env` file with session identity and commits
++6. Creates worktree with session branch at `.worktrees/{session-slug}`
++7. Provides activation instructions for the worktree
+ 
+ **Environment Variables Set:**
+ - `GIT_AUTHOR_NAME` - Agent-specific git author
+@@ -69,10 +69,12 @@ Completes a session and merges to main.
+ **What it does:**
+ 1. Generates patch file in session directory (`{session-slug}.patch`)
+ 2. Checks for KB learnings and creates KB merge session in `drafting/` if found
+-3. Moves session from `active/` to `completed/`
++3. Removes worktree at `.worktrees/{session-slug}`
+ 4. Merges session branch to main via squash merge
+-5. Deletes session branch
+-6. Reminds to deactivate environment variables
++5. Removes session from `.agents/sessions.lock`
++6. Moves session from `active/` to `completed/`
++7. Deletes session branch
++8. Reminds to deactivate environment variables
+ 
+ **KB Merge Session Creation:**
+ - Automatically creates `kb-{date}-merge-{topic}` session if learnings exist
+@@ -138,26 +140,30 @@ sed -e "s/{{AGENT_ID}}/cursor-1/g" \
+ # 1. Claim and activate session
+ ./_bin/claim-session 2025-10-14-auth-system
+ 
+-# 2. Activate session environment
+-cd sessions/active/2025-10-14-auth-system
+-source .session-env
++# 2. Activate session environment (in worktree)
++cd .worktrees/2025-10-14-auth-system
++source ../../sessions/active/2025-10-14-auth-system/.session-env
+ 
+ # 3. Verify activation
+-echo $GIT_AUTHOR_NAME  # Should show: Agent-cursor-1 (via username)
++echo $GIT_AUTHOR_NAME  # Should show: Cursor-Local-1 (via username)
+ echo $SESSION_SLUG    # Should show: 2025-10-14-auth-system
+ ```
+ 
+ #### Working on a Session
+ 
+ ```bash
++# Working from worktree (.worktrees/2025-10-14-auth-system)
++
+ # Make code changes
+ git add src/auth.js
+ git commit -m "[2025-10-14-auth-system] feat: add JWT validation"
+ 
+-# Update session documentation
+-echo "## [2025-10-14 15:30] Implemented JWT validation" >> worklog.md
++# Update session documentation (in main repo)
++echo "## [2025-10-14 15:30] Implemented JWT validation" >> ../../sessions/active/2025-10-14-auth-system/worklog.md
++cd ../../sessions/active/2025-10-14-auth-system
+ git add worklog.md
+ git commit -m "[2025-10-14-auth-system] docs: update worklog"
++cd ../../.worktrees/2025-10-14-auth-system
+ 
+ # Capture learnings
+ mkdir -p _AGENTS/knowledge/sessions/2025-10-14-auth-system
+@@ -185,19 +191,21 @@ git commit -m "[2025-10-14-auth-system] docs: capture learnings"
+ 
+ ```bash
+ # 1. Complete session (from repo root)
+-cd ../../..  # Back to repo root
++cd ../..  # Back to repo root
+ ./_bin/complete-session 2025-10-14-auth-system
+ 
+ # The script automatically:
+ # - Generates patch file: sessions/completed/2025-10-14-auth-system/2025-10-14-auth-system.patch
+ # - Creates KB merge session in drafting/ if learnings exist
+-# - Moves session to completed/
++# - Removes worktree at .worktrees/2025-10-14-auth-system
+ # - Merges session branch to main
++# - Removes session from .agents/sessions.lock
++# - Moves session to completed/
+ # - Deletes session branch
+ 
+ # 2. Deactivate environment
+ unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+-unset SESSION_SLUG SESSION_BRANCH PS1
++unset SESSION_SLUG SESSION_ID
+ ```
+ 
+ ### Manual Session Management
+@@ -222,8 +230,28 @@ git commit -m "[2025-10-14-auth-system] Claim session"
+ # 5. Push (atomic operation)
+ if git push origin main; then
+   echo "✅ Session claimed"
++  
++  # 6. Move to active and commit
+   mv sessions/planned/2025-10-14-auth-system sessions/active/
+-  # Create .session-env and session branch...
++  git add sessions/
++  git commit -m "[2025-10-14-auth-system] Move to active"
++  
++  # 7. Create .session-env and commit
++  cat > sessions/active/2025-10-14-auth-system/.session-env << 'EOF'
++export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
++export GIT_AUTHOR_EMAIL="cristos+2025-10-14-auth-system@agents.local"
++export GIT_COMMITTER_NAME="Session-2025-10-14-auth-system (via cristos)"
++export GIT_COMMITTER_EMAIL="cristos+2025-10-14-auth-system@agents.local"
++export SESSION_ID="2025-10-14-auth-system"
++export SESSION_SLUG="2025-10-14-auth-system"
++EOF
++  git add sessions/active/2025-10-14-auth-system/.session-env
++  git commit -m "[2025-10-14-auth-system] Add session environment"
++  
++  # 8. Create worktree with session branch
++  git worktree add -b session/2025-10-14-auth-system .worktrees/2025-10-14-auth-system HEAD
++  echo "✅ Worktree created at .worktrees/2025-10-14-auth-system"
++  echo "Activate: cd .worktrees/2025-10-14-auth-system && source ../../sessions/active/2025-10-14-auth-system/.session-env"
+ else
+   echo "❌ Claim failed - another agent got it first"
+   git reset --hard HEAD~1
+@@ -233,10 +261,10 @@ fi
+ #### Manual Completion Process
+ 
+ ```bash
+-# 1. Generate patch file
+-cd sessions/active/2025-10-14-auth-system
+-git format-patch main --stdout > 2025-10-14-auth-system.patch
+-echo "✅ Patch file created: 2025-10-14-auth-system.patch"
++# 1. Generate patch file (from worktree)
++cd .worktrees/2025-10-14-auth-system
++git format-patch main --stdout > ../../sessions/active/2025-10-14-auth-system/2025-10-14-auth-system.patch
++echo "✅ Patch file created: sessions/active/2025-10-14-auth-system/2025-10-14-auth-system.patch"
+ 
+ # 2. Check for KB learnings and create KB merge session if exists
+ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-auth-system/learnings.md" ]; then
+@@ -244,19 +272,26 @@ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-auth-system/learnings.md" ]; then
+   # [KB merge session creation logic]
+ fi
+ 
+-# 3. Move to completed
+-cd ../../..
+-mv sessions/active/2025-10-14-auth-system sessions/completed/
+-echo "✅ Session moved to completed/"
++# 3. Return to main repo and remove worktree
++cd ../..
++git worktree remove .worktrees/2025-10-14-auth-system
++echo "✅ Worktree removed"
+ 
+ # 4. Merge to main
+-git checkout main
+ git pull origin main
+ git merge --squash session/2025-10-14-auth-system
+ git commit -m "[2025-10-14-auth-system] Session complete: 2025-10-14-auth-system"
+ git push origin main
+ 
+-# 5. Cleanup
++# 5. Remove from lock and move to completed
++sed -i '/^2025-10-14-auth-system:/d' .agents/sessions.lock
++git add .agents/sessions.lock
++mv sessions/active/2025-10-14-auth-system sessions/completed/
++git add sessions/
++git commit -m "[2025-10-14-auth-system] Archive session"
++git push origin main
++
++# 6. Cleanup
+ git branch -d session/2025-10-14-auth-system
+ echo "✅ Session branch deleted"
+ ```
+@@ -265,52 +300,72 @@ echo "✅ Session branch deleted"
+ 
+ ## Git Worktrees Setup
+ 
+-Worktrees enable running multiple sessions concurrently by providing isolated working directories.
++Worktrees enable running multiple sessions concurrently by providing isolated working directories. Each session automatically gets its own worktree.
+ 
+-### Setup Worktrees
++### How It Works
+ 
+ ```bash
+-# Create worktrees directory (outside main repo)
+-mkdir -p ../repo-worktrees
++# Main repo structure
++.
++├── .git/                    # Shared git database
++├── .worktrees/              # Isolated session workspaces
++│   ├── 2025-10-14-auth-system/      # Full repo copy for this session
++│   └── 2025-10-14-api-work/         # Full repo copy for this session
++├── sessions/
++│   ├── active/
++│   │   ├── 2025-10-14-auth-system/  # Session metadata
++│   │   └── 2025-10-14-api-work/     # Session metadata
++│   └── ...
++└── ...
++```
++
++### Creating Session Worktrees
++
++```bash
++# When claiming a session, worktree is created automatically
++./_bin/claim-session 2025-10-14-auth-system
+ 
+-# Create worktrees for agents
+-git worktree add ../repo-worktrees/agent-1 main
+-git worktree add ../repo-worktrees/agent-2 main
+-git worktree add ../repo-worktrees/agent-3 main
++# Manual creation if needed
++git worktree add -b session/2025-10-14-auth-system \
++  .worktrees/2025-10-14-auth-system \
++  HEAD
+ 
+-# Result:
+-# /path/to/repo/              # Main repo
+-# /path/to/repo-worktrees/    # Worktrees container
+-#   ├── agent-1/
+-#   ├── agent-2/
+-#   └── agent-3/
++# Activate in worktree
++cd .worktrees/2025-10-14-auth-system
++source ../../sessions/active/2025-10-14-auth-system/.session-env
++
++# Work on session...
+ ```
+ 
+-### Using Worktrees
++### Multiple Concurrent Sessions
+ 
+ ```bash
+-# Agent 1 works in worktree
+-cd ../repo-worktrees/agent-1
+-./_bin/claim-session 2025-10-14-auth-system
+-cd sessions/active/2025-10-14-auth-system
+-source .session-env
+-# Work on session...
++# Session 1 (Auth System)
++cd .worktrees/2025-10-14-auth-system
++source ../../sessions/active/2025-10-14-auth-system/.session-env
++# Work on auth...
+ 
+-# Agent 2 works in different worktree
+-cd ../repo-worktrees/agent-2
+-./_bin/claim-session claude-a 2025-10-14-api-work
+-cd sessions/active/2025-10-14-api-work
+-source .session-env
+-# Work on session...
++# Session 2 (API Refactor) - runs concurrently
++cd .worktrees/2025-10-14-api-refactor
++source ../../sessions/active/2025-10-14-api-refactor/.session-env
++# Work on API...
++
++# Both sessions work simultaneously without interference
+ ```
+ 
+ ### Cleanup Worktrees
+ 
+ ```bash
+-# After session completion
+-git worktree remove ../repo-worktrees/agent-1
++# Automatic cleanup during session completion
++./_bin/complete-session 2025-10-14-auth-system
+ 
+-# Or prune all deleted worktrees
++# Manual removal if needed
++git worktree remove .worktrees/2025-10-14-auth-system
++
++# List all worktrees
++git worktree list
++
++# Prune deleted worktrees
+ git worktree prune
+ ```
+ 
+@@ -318,11 +373,13 @@ git worktree prune
+ - Shared `.git` directory (efficient disk usage)
+ - Isolated working directories (no file conflicts)
+ - Can run multiple sessions concurrently
+-- All see same git history
++- Main repo stays on base branch (dev/main)
++- Session metadata separate from workspace
+ 
+ **Limitations:**
+ - Can't checkout same branch in multiple worktrees
+-- Must use unique branch names per session
++- Each session must have unique branch name
++- `.worktrees/` directory should be in `.gitignore`
+ 
+ ---
+ 
+@@ -352,11 +409,24 @@ cat .agents/sessions.lock
+ # Check if specific session is claimed
+ grep "2025-10-14-auth-system" .agents/sessions.lock
+ 
+-# Clean up stale claims
++# Remove session on completion
++sed -i '/^2025-10-14-auth-system:/d' .agents/sessions.lock
++git add .agents/sessions.lock
++git commit -m "[2025-10-14-auth-system] Release session lock"
++
++# Clean up stale claims manually if needed
+ grep -v "old-session" .agents/sessions.lock > temp
+ mv temp .agents/sessions.lock
++git add .agents/sessions.lock
++git commit -m "[cleanup] Remove stale session locks"
+ ```
+ 
++**Lifecycle:**
++1. **Claim:** Added to lock file with timestamp
++2. **Active:** Entry remains in lock file during work
++3. **Complete:** Removed from lock file before archiving
++4. **Result:** Lock file only contains active sessions
++
+ ### Agent Registry (Optional)
+ 
+ Location: `.agents/agents/`
+@@ -573,12 +643,12 @@ git commit -m "[your-session-id] Initialize session learnings"
+ echo $GIT_AUTHOR_NAME
+ echo $SESSION_SLUG
+ 
+-# If not set, activate session
+-cd sessions/active/your-session/
+-source .session-env
++# If not set, activate session (from worktree)
++cd .worktrees/your-session-id/
++source ../../sessions/active/your-session-id/.session-env
+ 
+ # Verify activation
+-echo $GIT_AUTHOR_NAME  # Should show: Agent-your-id (via username)
++echo $GIT_AUTHOR_NAME  # Should show: Cursor-Local-1 (via username)
+ echo $SESSION_SLUG    # Should show: your-session-id
+ 
+ # If commits already made with wrong identity, amend last commit
+diff --git a/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md
+index 7865da0..81c6786 100644
+--- a/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md
++++ b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md
+@@ -15,6 +15,126 @@ Created comprehensive alignment session for sessions protocol files.
+ **Context:**
+ Recent refactoring has made the protocol session-focused (not agent-focused), but there may be lingering inconsistencies or areas needing improvement across all related files.
+ 
+-**Session Status:** Drafting - awaiting user review before moving to planned/
++**Session Status:** Active - Properly claimed following protocol
++
++## [2025-10-15] Session Claimed and Critical Issue Identified
++
++**Session Claim Process:**
++- Moved from manual active → planned
++- Properly claimed via `.agents/sessions.lock` 
++- Created session branch `session/2025-10-15-align-sessions-protocol`
++- Added `.session-env` file
++
++**Critical Issue Discovered:**
++User identified that `git checkout -b` changes the base branch in the original directory, which is problematic for multi-agent collaboration. This breaks the isolation principle.
++
++**Solution Implemented:**
++Changed protocol to use `git worktree` instead of `git checkout`:
++- Creates isolated working directory per session
++- Main repo stays on base branch
++- Multiple sessions can work simultaneously without interference
++- Session work happens in `sessions/active/{session-slug}/worktree/`
++
++**Changes Made to SESSIONS-README.md:**
++1. Updated manual process to commit after moving to active (before worktree creation)
++2. Changed from `git checkout -b` to `git worktree add -b`
++3. Updated activation to work from worktree directory
++4. Updated completion process to remove worktree properly
++5. Updated directory structure documentation to show worktree
++6. Updated all path references to include `/worktree` where appropriate
++7. Fixed cleanup steps to handle worktree removal
++8. Updated Quick Start section
++
++**Next Steps:**
++- Review and update SESSIONS-REFERENCE.md for consistency
++- Update `_bin/claim-session` script to use worktree
++- Update `_bin/complete-session` script to handle worktree
++- Test the new workflow end-to-end
++- Update templates if needed
++
++## [2025-10-15] Refined Worktree Approach and Session Lock Management
++
++**Issue 1: Worktree Location**
++User asked: Can worktree exist within parent repo?
++- Yes, but it creates tracking conflicts
++- Session metadata files need to be in main repo
++- Worktree files would conflict with session tracking
++
++**Solution:**
++- Worktrees live at `.worktrees/{session-slug}/` (repo root level)
++- Session metadata stays at `sessions/active/{session-slug}/`
++- Clean separation between workspace and metadata
++- Added `.worktrees/` to `.gitignore`
++
++**Issue 2: Session Lock Cleanup**
++User identified missing session lock cleanup on completion.
++
++**Solution Added:**
++- Remove session from `.agents/sessions.lock` during completion
++- Use `sed -i '/^{session-id}:/d' .agents/sessions.lock`
++- Happens before archiving session to completed/
++- Ensures lock file stays clean and accurate
++
++**Additional Changes to SESSIONS-README.md:**
++1. Moved worktrees to `.worktrees/` at repo root (not in sessions/)
++2. Updated all path references for worktree location
++3. Added session lock removal to completion workflow
++4. Updated directory structure diagram to show both locations
++5. Updated activation paths to reference correct `.session-env` location
++6. Created `.gitignore` with `.worktrees/` entry
++
++**Key Benefits:**
++- ✅ Clean separation of workspace vs metadata
++- ✅ Session lock accurately reflects active sessions
++- ✅ Worktrees don't clutter git tracking
++- ✅ Multiple sessions can work simultaneously
++- ✅ Easy to see active sessions via `cat .agents/sessions.lock`
++
++## [2025-10-15] Updated SESSIONS-REFERENCE.md for Worktree Consistency
++
++**Changes Made to SESSIONS-REFERENCE.md:**
++
++1. **Utility Scripts Section:**
++   - Updated `claim-session` description to include worktree creation
++   - Updated `complete-session` description to include worktree removal and lock cleanup
++   - Changed activation paths to reference worktree locations
++
++2. **Detailed Implementation Examples:**
++   - Updated "Starting a Session" to use `.worktrees/{slug}` path
++   - Updated "Working on a Session" to show working from worktree
++   - Added note about updating session docs in main repo while in worktree
++   - Fixed path navigation (cd ../.. instead of ../../..)
++   - Updated completion steps to include worktree removal
++   - Fixed environment variable names (SESSION_ID instead of SESSION_BRANCH)
++
++3. **Manual Session Management:**
++   - Expanded manual claim process to show all steps including worktree creation
++   - Updated manual completion to include worktree removal
++   - Added session lock removal with sed command
++   - Updated all path references for worktree structure
++
++4. **Git Worktrees Setup (Complete Rewrite):**
++   - Changed from agent-based worktrees to session-based worktrees
++   - Documented new structure: `.worktrees/{session-slug}/`
++   - Showed separation of workspace vs metadata
++   - Added examples of multiple concurrent sessions
++   - Updated benefits to include "Main repo stays on base branch"
++   - Added limitation about `.worktrees/` in `.gitignore`
++
++5. **Session Lock Section:**
++   - Added session lock removal commands
++   - Documented lifecycle: Claim → Active → Complete (with removal)
++   - Added proper git commit examples for lock changes
++
++6. **Troubleshooting:**
++   - Updated "Agent Identity Not Showing" to use worktree paths
++   - Fixed activation commands to reference correct `.session-env` location
++
++**Consistency Achieved:**
++- ✅ All examples now use `.worktrees/{session-slug}` structure
++- ✅ All activation paths reference `../../sessions/active/{slug}/.session-env`
++- ✅ Session lock cleanup documented in all completion workflows
++- ✅ Worktree removal shown in all completion examples
++- ✅ Both README and REFERENCE now consistent with each other
+ 
+ 
+-- 
+2.43.0
+
+
+From 670bc25db024703dcacf971c43b094926f183f06 Mon Sep 17 00:00:00 2001
+From: "Cursor-Local-1 (via cristos)"
+ <cristos+2025-10-15-align-sessions-protocol@agents.local>
+Date: Tue, 14 Oct 2025 22:33:06 -0400
+Subject: [PATCH 3/3] [2025-10-15-align-sessions-protocol] feat: implement
+ worktree-based workflow in claim and complete scripts
+
+---
+ _AGENTS/sessions/_bin/claim-session           | 30 +++++---
+ _AGENTS/sessions/_bin/complete-session        | 58 ++++++++++-----
+ .../worklog.md                                | 74 +++++++++++++++++++
+ 3 files changed, 133 insertions(+), 29 deletions(-)
+
+diff --git a/_AGENTS/sessions/_bin/claim-session b/_AGENTS/sessions/_bin/claim-session
+index e84189f..ff47f00 100755
+--- a/_AGENTS/sessions/_bin/claim-session
++++ b/_AGENTS/sessions/_bin/claim-session
+@@ -50,34 +50,41 @@ git commit -m "[$SESSION_SLUG] Claim session"
+ if git push origin main; then
+   echo "✅ Session claimed successfully"
+   
+-  # Step 6: Move session to active
++  # Step 6: Move session to active and commit
++  echo "📁 Moving session to active..."
+   mv _AGENTS/sessions/planned/$SESSION_SLUG _AGENTS/sessions/active/
++  git add _AGENTS/sessions/
++  git commit -m "[$SESSION_SLUG] Move to active"
+   
+-  # Step 7: Create session activation file
++  # Step 7: Create session activation file and commit
++  echo "🔑 Creating session environment..."
+   cat > _AGENTS/sessions/active/$SESSION_SLUG/.session-env << EOF
+-export GIT_AUTHOR_NAME="Session-$SESSION_SLUG (via $USER_NAME)"
++export GIT_AUTHOR_NAME="Cursor-Local-1 (via $USER_NAME)"
+ export GIT_AUTHOR_EMAIL="$USER_EMAIL+$SESSION_SLUG@agents.local"
+ export GIT_COMMITTER_NAME="Session-$SESSION_SLUG (via $USER_NAME)"
+ export GIT_COMMITTER_EMAIL="$USER_EMAIL+$SESSION_SLUG@agents.local"
++export SESSION_ID="$SESSION_SLUG"
+ export SESSION_SLUG="$SESSION_SLUG"
+-export SESSION_BRANCH="session/$SESSION_SLUG"
+ export PS1="($SESSION_SLUG) \w $ "
+ echo "✅ Session active: \$SESSION_SLUG"
+ EOF
+   
+-  git add _AGENTS/sessions/
+-  git commit -m "[$SESSION_SLUG] Move session to active and create activation"
+-  git push origin main
++  git add _AGENTS/sessions/active/$SESSION_SLUG/.session-env
++  git commit -m "[$SESSION_SLUG] Add session environment"
+   
+-  # Step 8: Create session branch
+-  git checkout -b session/$SESSION_SLUG
++  # Step 8: Create worktree with session branch
++  echo "🌳 Creating worktree..."
++  git worktree add -b session/$SESSION_SLUG .worktrees/$SESSION_SLUG HEAD
+   
+   echo ""
+   echo "✅ Session ready: $SESSION_SLUG"
+   echo ""
++  echo "📂 Worktree location: .worktrees/$SESSION_SLUG"
++  echo "📄 Session metadata: _AGENTS/sessions/active/$SESSION_SLUG"
++  echo ""
+   echo "To activate session environment:"
+-  echo "  cd _AGENTS/sessions/active/$SESSION_SLUG"
+-  echo "  source .session-env"
++  echo "  cd .worktrees/$SESSION_SLUG"
++  echo "  source ../../_AGENTS/sessions/active/$SESSION_SLUG/.session-env"
+   echo ""
+   echo "Session branch: session/$SESSION_SLUG"
+   
+@@ -89,4 +96,3 @@ else
+   echo "Try claiming a different session"
+   exit 1
+ fi
+-
+diff --git a/_AGENTS/sessions/_bin/complete-session b/_AGENTS/sessions/_bin/complete-session
+index e62f94f..0bc1ed1 100755
+--- a/_AGENTS/sessions/_bin/complete-session
++++ b/_AGENTS/sessions/_bin/complete-session
+@@ -14,6 +14,7 @@ if [ -z "$SESSION_SLUG" ]; then
+ fi
+ 
+ SESSION_PATH="_AGENTS/sessions/active/$SESSION_SLUG"
++WORKTREE_PATH=".worktrees/$SESSION_SLUG"
+ 
+ # Verify session exists
+ if [ ! -d "$SESSION_PATH" ]; then
+@@ -23,11 +24,17 @@ fi
+ 
+ echo "🏁 Completing session: $SESSION_SLUG"
+ 
+-# 1. Generate patch
++# 1. Generate patch (from worktree if it exists)
+ echo "📦 Generating patch file..."
+-cd "$SESSION_PATH"
+-git format-patch main --stdout > "$SESSION_SLUG.patch"
+-cd ../../../..
++if [ -d "$WORKTREE_PATH" ]; then
++  cd "$WORKTREE_PATH"
++  git format-patch main --stdout > "../../$SESSION_PATH/$SESSION_SLUG.patch"
++  cd ../..
++else
++  echo "⚠️  Worktree not found, attempting from current location..."
++  git format-patch main --stdout > "$SESSION_PATH/$SESSION_SLUG.patch"
++fi
++echo "✅ Patch created: $SESSION_PATH/$SESSION_SLUG.patch"
+ 
+ # 2. Check for KB learnings and create KB merge session if exists
+ if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
+@@ -77,32 +84,49 @@ EOF
+   echo "📝 Review and move to planned/ when ready for agents to claim"
+ fi
+ 
+-# 3. Move to completed
+-echo "📁 Moving session to completed/..."
+-mv "$SESSION_PATH" _AGENTS/sessions/completed/
+-git add _AGENTS/sessions/
+-git commit -m "[$SESSION_SLUG] Complete session"
++# 3. Remove worktree if it exists
++if [ -d "$WORKTREE_PATH" ]; then
++  echo "🌳 Removing worktree..."
++  git worktree remove "$WORKTREE_PATH" 2>/dev/null || git worktree remove --force "$WORKTREE_PATH"
++  echo "✅ Worktree removed"
++else
++  echo "⚠️  No worktree found at $WORKTREE_PATH"
++fi
+ 
+ # 4. Merge to main
+ echo "🔀 Merging to main..."
+-git checkout main
+ git pull origin main
+ git merge --squash "session/$SESSION_SLUG"
+ git commit -m "[$SESSION_SLUG] Session complete: $SESSION_SLUG"
+ git push origin main
+ 
+-# 5. Cleanup
+-echo "🧹 Cleaning up..."
++# 5. Remove session from lock file
++echo "🔓 Releasing session lock..."
++sed -i "/^$SESSION_SLUG:/d" .agents/sessions.lock
++git add .agents/sessions.lock
++
++# 6. Move to completed
++echo "📁 Moving session to completed/..."
++mv "$SESSION_PATH" _AGENTS/sessions/completed/
++git add _AGENTS/sessions/
++git commit -m "[$SESSION_SLUG] Archive session"
++git push origin main
++
++# 7. Cleanup branch
++echo "🧹 Cleaning up branch..."
+ git branch -d "session/$SESSION_SLUG"
+ 
+ echo ""
+ echo "✅ Session complete: $SESSION_SLUG"
+ echo ""
++echo "📦 Artifacts:"
++echo "  - Patch: _AGENTS/sessions/completed/$SESSION_SLUG/$SESSION_SLUG.patch"
++echo "  - Worklog: _AGENTS/sessions/completed/$SESSION_SLUG/worklog.md"
++if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
++  echo "  - Learnings: _AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md"
++fi
++echo ""
+ echo "⚠️  Remember to deactivate session environment:"
+ echo "  unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL"
+-echo "  unset SESSION_SLUG SESSION_BRANCH PS1"
++echo "  unset SESSION_SLUG SESSION_ID PS1"
+ echo ""
+-echo "💡 If you used a worktree, clean it up:"
+-echo "  git worktree remove <worktree-path>"
+-echo "  git worktree prune"
+-
+diff --git a/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md
+index 81c6786..cfcca29 100644
+--- a/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md
++++ b/_AGENTS/sessions/active/2025-10-15-align-sessions-protocol/worklog.md
+@@ -137,4 +137,78 @@ User identified missing session lock cleanup on completion.
+ - ✅ Worktree removal shown in all completion examples
+ - ✅ Both README and REFERENCE now consistent with each other
+ 
++## [2025-10-15] Updated Scripts for Worktree Workflow
++
++**Changes to `_bin/claim-session`:**
++
++1. **Step 6 - Move to Active (NEW COMMIT):**
++   - Now commits the move to active as separate step
++   - Ensures session location is tracked before worktree creation
++   - Commit message: `[$SESSION_SLUG] Move to active`
++
++2. **Step 7 - Create .session-env (NEW COMMIT):**
++   - Creates activation file with proper environment variables
++   - Changed `GIT_AUTHOR_NAME` format to: `Cursor-Local-1 (via $USER_NAME)`
++   - Added `SESSION_ID` variable (matches `SESSION_SLUG`)
++   - Removed `SESSION_BRANCH` variable (replaced by `SESSION_ID`)
++   - Commits activation file separately
++   - Commit message: `[$SESSION_SLUG] Add session environment`
++
++3. **Step 8 - Create Worktree (REPLACES CHECKOUT):**
++   - Uses `git worktree add -b session/$SESSION_SLUG .worktrees/$SESSION_SLUG HEAD`
++   - Creates isolated workspace at `.worktrees/{slug}`
++   - No longer changes branch in main repo
++   - Automatic branch creation with worktree
++
++4. **Updated Instructions:**
++   - Shows worktree location: `.worktrees/$SESSION_SLUG`
++   - Shows metadata location: `_AGENTS/sessions/active/$SESSION_SLUG`
++   - Activation command: `cd .worktrees/$SESSION_SLUG && source ../../_AGENTS/sessions/active/$SESSION_SLUG/.session-env`
++
++**Changes to `_bin/complete-session`:**
++
++1. **Step 1 - Generate Patch (UPDATED):**
++   - Checks if worktree exists before generating patch
++   - If worktree exists: generates from worktree location
++   - If worktree missing: attempts from current location with warning
++   - Saves patch to session metadata directory
++
++2. **Step 3 - Remove Worktree (NEW):**
++   - Removes worktree at `.worktrees/$SESSION_SLUG`
++   - Uses `git worktree remove` with fallback to `--force` if needed
++   - Checks if worktree exists before attempting removal
++   - Shows warning if worktree not found
++
++3. **Step 4 - Merge to Main (UPDATED):**
++   - Removed `git checkout main` (already on main in repo root)
++   - Squash merges session branch to main
++   - Pushes immediately after commit
++
++4. **Step 5 - Release Session Lock (NEW):**
++   - Removes session from `.agents/sessions.lock`
++   - Uses `sed -i "/^$SESSION_SLUG:/d" .agents/sessions.lock`
++   - Stages lock file for commit
++
++5. **Step 6 - Move to Completed (REORDERED):**
++   - Now happens after lock removal
++   - Combined with lock file commit
++   - Commit message: `[$SESSION_SLUG] Archive session`
++
++6. **Step 7 - Cleanup Branch (SAME):**
++   - Deletes session branch with `git branch -d`
++
++7. **Updated Output:**
++   - Shows all artifact locations clearly
++   - Fixed variable names in deactivation reminder (SESSION_ID not SESSION_BRANCH)
++   - Removed worktree cleanup reminder (now handled automatically)
++
++**Key Improvements:**
++- ✅ Scripts now match documented workflow exactly
++- ✅ Proper commit sequence (claim → move → env → worktree)
++- ✅ Session lock properly managed (add on claim, remove on complete)
++- ✅ Worktree creation and removal automated
++- ✅ Main repo never changes branches
++- ✅ Clear feedback at each step
++- ✅ Error handling for missing worktrees
++
+ 
+-- 
+2.43.0
+

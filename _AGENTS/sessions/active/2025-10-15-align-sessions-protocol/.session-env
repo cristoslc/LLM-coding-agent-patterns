@@ -1,0 +1,6 @@
+export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
+export GIT_AUTHOR_EMAIL="cristos+2025-10-15-align-sessions-protocol@agents.local"
+export GIT_COMMITTER_NAME="Session-2025-10-15-align-sessions-protocol (via cristos)"
+export GIT_COMMITTER_EMAIL="cristos+2025-10-15-align-sessions-protocol@agents.local"
+export SESSION_ID="2025-10-15-align-sessions-protocol"
+export SESSION_SLUG="2025-10-15-align-sessions-protocol"
