@@ -236,7 +236,6 @@ if git push origin main; then
   mv sessions/planned/2025-10-14-auth-system sessions/active/
   git add sessions/
   git commit -m "[2025-10-14-auth-system] Move to active"
-<<<<<<< HEAD
   
   # 7. Set SESSION.md to read-only
   chmod 444 sessions/active/2025-10-14-auth-system/SESSION.md
@@ -728,7 +727,6 @@ chmod 644 sessions/active/your-session/SESSION.md
 ./_bin/complete-session your-session
 ```
 
->>>>>>> cursor/review-and-start-align-session-templates-605d
 ---
 
 ## Audit & Traceability

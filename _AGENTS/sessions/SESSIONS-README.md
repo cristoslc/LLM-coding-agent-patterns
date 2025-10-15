@@ -283,7 +283,6 @@ chmod 444 sessions/active/{session-slug}/SESSION.md
 **FAQ: How do I track scope changes?**
 - **Answer:** Use `worklog.md` for progress updates, `active-plan.md` for task changes, and `subsessions.md` for scope additions that create new sessions. These files are writable during active work.
 
->>>>>>> cursor/review-and-start-align-session-templates-605d
 ### Session Activation & Claiming
 
 Agent identity is established per-session via environment variables. The `claim-session` script creates a `.session-env` file in the session directory.
