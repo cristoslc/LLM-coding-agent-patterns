@@ -2,7 +2,7 @@
 
 ## Current Focus
 
-Session is in **drafting** status. Ready to move to planned/ for agent to claim.
+Session is in **planned** status. Ready for agent to claim.
 
 ## Task Breakdown
 
@@ -55,8 +55,7 @@ None - ready to start.
 
 ## Next Actions
 
-1. User reviews session and moves to planned/
-2. Agent claims session
+1. Agent claims session
 3. Agent begins with script updates
 4. Agent tests incrementally
 
