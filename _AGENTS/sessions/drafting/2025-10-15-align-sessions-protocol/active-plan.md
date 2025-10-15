@@ -42,7 +42,17 @@ Session is in **drafting** status. Awaiting user review and approval before movi
 - [ ] Simplify complex explanations
 - [ ] Improve readability and scannability
 
-### Phase 6: Final Validation
+### Phase 6: Implement Read-Only SESSION.md Protection
+- [ ] Update claim-session to set SESSION.md as read-only (chmod 444)
+- [ ] Update complete-session to unlock SESSION.md (chmod 644)
+- [ ] Add documentation explaining read-only protection
+- [ ] Document that updates go to worklog/active-plan/subsessions
+- [ ] Explain purpose: preserve original plan to track drift
+- [ ] Update templates with read-only instructions
+- [ ] Test file permissions work correctly
+- [ ] Verify clear error messages when editing attempted
+
+### Phase 7: Final Validation
 - [ ] Final pass review of all files
 - [ ] Verify all acceptance criteria met
 - [ ] Update worklog with findings
