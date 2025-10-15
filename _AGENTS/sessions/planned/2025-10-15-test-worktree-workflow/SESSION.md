@@ -1,5 +1,9 @@
 # Session: Test Worktree Workflow End-to-End
 
+## Status
+
+This session has been moved from drafting/ to planned/ for agent to claim.
+
 ## Context
 
 The sessions protocol was just migrated to use `git worktree` for session isolation (session `2025-10-15-align-sessions-protocol`). However, the updated `claim-session` and `complete-session` scripts have **never been tested** in a real end-to-end scenario.
