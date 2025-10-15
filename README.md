@@ -6,6 +6,23 @@ A comprehensive framework for organizing and managing LLM-powered coding agent s
 
 This project provides a systematic approach to managing coding agent sessions, ensuring consistent documentation, progress tracking, and knowledge capture. It's designed to help developers and AI agents work together more effectively by providing clear patterns and workflows.
 
+## Quickstart
+
+1. Clone or download+copy the `_AGENTS` directory into your project.
+2. Prompt your local agent (cursor, Roo Code, Continue.dev, aider, Claude code, codex, etc.): `Create a new session folder based on @_AGENTS/sessions/SESSIONS-README.md with purpose: {{your-purpose}}`
+3. Edit the session file like you would a Jira ticket for a junior dev.
+4. Tell your local agent `Implement @YYYY-MM-DD-session-slug/SESSION.md.`
+
+_No muss, no fuss, no install script to run._
+
+**Example:**
+> _User Prompt:_ Create a new session folder based on @SESSIONS-README.md with purpose: resolve errors identified in the attached error.log
+>
+> _Agent:_ # creates folder `_AGENTS/sessions/2025-11-01-resolve-logged-errors`
+>
+> _User Prompt:_ Confirm your understanding of `@_AGENTS/sessions/2025-11-01-resolve-logged-errors/SESSION.md` and begin implementing it.
+
+
 ## Key Features
 
 ### 🎯 Structured Session Management
