@@ -1,0 +1,143 @@
+{# =======================================================
+   LLM RFC TEMPLATE SPEC (Never Rendered)
+   Purpose:
+     This file defines the structure and writing expectations
+     for a **Request for Comments (RFC)** document.
+     RFCs are formal proposals to introduce, modify, or retire
+     standards, systems, or processes within an organization.
+
+   For the model:
+     - This template is a **spec**, not a literal prompt.
+     - You must read and follow its structure and tone
+       when generating new RFCs based on <context_docs>…</context_docs>.
+     - Final output must be clean Markdown (no braces, comments, or code).
+     - Write clearly, concisely, and persuasively for a mixed audience
+       of technical and non-technical reviewers.
+     - Retain all section headings, even if a section is “Not applicable”.
+
+   Style guidance:
+     - Write in a professional but approachable tone.
+     - Each section should read like an executive briefing,
+       not a bullet list of fragments.
+     - When you use lists, explain them — don’t just enumerate.
+   ======================================================= #}
+
+# Request for Comments (RFC): {{ TITLE }}
+{# Example: [RFC] Unifying Access Control Across Internal Dashboards #}
+
+**Author(s):** {{ AUTHORS }}
+{# Example: Jordan Lee (Platform Engineering), Mia Alvarez (Data Systems) #}
+
+**Date:** {{ DATE }}
+{# Example: October 14, 2025 #}
+
+**Revisit Date:** {{ REVISIT_DATE }}
+{# Example: January 31, 2026 — review adoption and assess whether exceptions are still required. #}
+
+---
+
+### 1. Context / Problem Statement
+{{ CONTEXT }}
+{# Explain the situation prompting this RFC. Give just enough background for a new reader to understand why the change matters.
+   Example:
+   Over the past year, multiple teams have built dashboards using separate access-control methods. Some rely on manual user lists, others on project-based permissions, and a few use ad hoc scripts. This inconsistency has created friction for new hires, delayed onboarding, and increased security review overhead. Two minor access incidents were traced to outdated permissions in the last quarter.
+#}
+
+---
+
+### 2. Proposed Change
+{{ PROPOSAL }}
+{# Describe the proposed solution and why it addresses the problem better than current practice. Outline the main components, their scope, and who will own implementation.
+   Example:
+   We propose consolidating all internal dashboards under a single role-based access control (RBAC) service managed by Platform Engineering. Permissions will be group-based rather than user-specific, and provisioning will be automated through HR onboarding workflows. The goal is to reduce manual requests and create a consistent model for security audits. Data and Analytics teams will handle migration of existing dashboards to the new model during a 60-day transition period.
+#}
+
+---
+
+### 3. Alternatives Considered
+{{ ALTERNATIVES }}
+{# Summarize the main options that were explored and explain why they were not selected. Be honest and analytical.
+   Example:
+   - **Status Quo:** Retaining independent ACLs would minimize short-term work but preserve long-term risk and inefficiency.
+   - **Third-Party IAM Tool:** External software provides strong compliance features but carries high licensing costs and limited integration flexibility.
+   - **Custom Middleware Layer:** Offers a unified interface, but duplicates functionality of existing RBAC tooling already approved for internal use.
+#}
+
+---
+
+### 4. Impact & Benefits
+{{ IMPACT }}
+{# Describe both qualitative and quantitative benefits. Who gains, and how does the change improve their experience or efficiency?
+   Example:
+   This change will streamline access requests, accelerate onboarding, and reduce audit preparation time. Teams can expect new users to gain access automatically within one business day instead of the current three to five. Security reviews should require fewer manual exceptions. Although there will be some up-front migration effort, the long-term maintenance savings outweigh it substantially.
+#}
+
+---
+
+### 5. Success Metrics
+{{ METRICS }}
+{# Define how you will measure success. Each metric should be specific, measurable, and time-bound. Where possible, include baseline values.
+   Example:
+   - 95% of dashboards governed by the centralized RBAC system within 60 days of rollout.
+   - Mean access provisioning time reduced from 3 days to under 8 business hours.
+   - At least 90% of recurring audit checks automated through standard reporting.
+   - Positive feedback from 80% of team leads in post-implementation survey.
+#}
+
+---
+
+### 6. Risks & Mitigations
+{{ RISKS }}
+{# Identify potential risks, both technical and organizational. Pair each with a concrete mitigation and responsible owner.
+   Example:
+   - **Risk:** Some legacy dashboards may not support role-based access directly.
+     **Mitigation:** Provide a compatibility layer during migration and track remaining exceptions in a public register.
+     **Owner:** Data Systems Team.
+   - **Risk:** Teams might delay migration due to competing priorities.
+     **Mitigation:** Require sign-off from Engineering Managers as part of quarterly OKRs.
+     **Owner:** Platform PMO.
+#}
+
+---
+
+### 7. Open Questions / Feedback Requested
+{{ QUESTIONS }}
+{# List specific questions or decisions still open. Mention the type of feedback or expertise needed.
+   Example:
+   - Should project-level overrides remain supported after full migration?
+   - Is one-day access turnaround an acceptable service level for all departments?
+   - Would Finance or HR data require additional review before integration?
+#}
+
+---
+
+### 8. Next Steps / Decision Process
+{{ NEXT_STEPS }}
+{# Lay out what happens after this RFC is circulated. Include a timeline, who provides input, and what criteria decide go/no-go.
+   Example:
+   1. Collect feedback by **October 28**.
+   2. Incorporate revisions and confirm implementation plan by **November 4**.
+   3. Pilot with Data and RevOps teams during **November**.
+   4. Architecture Review Board approval on **December 2**.
+   5. Full rollout during **December–January**, contingent on pilot success metrics.
+#}
+
+---
+
+### Appendix (Optional)
+{{ APPENDIX }}
+{# Use this section for references, supporting diagrams, definitions, or links to related RFCs and design docs. Example:
+   - Reference: RFC-012 “Standardizing Service Authentication”
+   - Diagram: Access Control Flow, attached as image or link
+   - Glossary: Definitions of “RBAC”, “ACL”, and “Onboarding Workflow”
+#}
+
+{# =======================================================
+CHECKLIST FOR LLM (not part of final RFC):
+- [ ] Title includes “Request for Comments (RFC)”.
+- [ ] All placeholders replaced with specific, contextual content.
+- [ ] Sections are complete, with clear narrative flow.
+- [ ] Metrics and risks are specific and actionable.
+- [ ] Tone is professional, explanatory, and persuasive.
+- [ ] No template syntax or comments remain in final output.
+======================================================= #}
