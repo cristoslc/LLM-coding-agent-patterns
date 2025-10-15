@@ -1,0 +1,42 @@
+# Session: {{ session_name }}
+
+**Session ID**: `{{ session_id }}`  
+**Created**: {{ created_date }}  
+**Status**: {{ status | default('active') }}  
+**Agent**: {{ agent_name | default('Assistant') }}  
+
+## Context
+
+{{ context | default('Please describe what this session is about and its purpose.') }}
+
+## Acceptance Criteria
+
+{% if acceptance_criteria %}
+{% for criterion in acceptance_criteria %}
+- [ ] {{ criterion }}
+{% endfor %}
+{% else %}
+- [ ] Define clear success metrics for this session
+- [ ] Complete all identified requirements
+- [ ] Document any lessons learned
+{% endif %}
+
+## Original Implementation Plan
+
+{{ implementation_plan | default('Please outline your initial approach to solve this problem.') }}
+
+## Session Notes
+
+{% if notes %}
+{{ notes }}
+{% else %}
+_Session notes will be added as work progresses._
+{% endif %}
+
+---
+
+**Session Structure**:
+- **worklog.md**: Progress tracking and decision log
+- **active-plan.md**: Dynamic implementation plan with tasks  
+- **subsessions.md**: Sub-session breakdown and status
+- **{{ session_id }}.patch**: Final patch file (generated on completion)
