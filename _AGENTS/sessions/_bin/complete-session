@@ -105,14 +105,32 @@ echo "🔓 Releasing session lock..."
 sed -i "/^$SESSION_SLUG:/d" .agents/sessions.lock
 git add .agents/sessions.lock
 
-# 6. Move to completed
+# 6. Unlock SESSION.md for final updates
+echo "📝 Unlocking SESSION.md for final updates..."
+chmod 644 "$SESSION_PATH/SESSION.md"
+git add "$SESSION_PATH/SESSION.md"
+git commit -m "[$SESSION_SLUG] Unlock SESSION.md for final updates"
+
+echo ""
+echo "📝 SESSION.md is now writable. Add final notes if needed:"
+echo "  nano $SESSION_PATH/SESSION.md"
+echo ""
+read -p "Press Enter to continue with archival..."
+
+# 7. Move to completed
 echo "📁 Moving session to completed/..."
 mv "$SESSION_PATH" _AGENTS/sessions/completed/
 git add _AGENTS/sessions/
 git commit -m "[$SESSION_SLUG] Archive session"
+
+# 8. Set SESSION.md back to read-only in completed
+echo "🔒 Setting SESSION.md to read-only in completed/..."
+chmod 444 "_AGENTS/sessions/completed/$SESSION_SLUG/SESSION.md"
+git add "_AGENTS/sessions/completed/$SESSION_SLUG/SESSION.md"
+git commit -m "[$SESSION_SLUG] Set SESSION.md read-only in completed"
 git push origin main
 
-# 7. Cleanup branch
+# 9. Cleanup branch
 echo "🧹 Cleaning up branch..."
 git branch -d "session/$SESSION_SLUG"
 
