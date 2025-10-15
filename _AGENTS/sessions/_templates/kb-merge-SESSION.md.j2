@@ -1,12 +1,25 @@
-# KB Merge Session: {{TOPIC}}
+{# =======================================================
+   KB MERGE SESSION TEMPLATE
+   Purpose:
+     This template creates a knowledge base merge session document
+     for integrating learnings from completed sessions into the
+     shared knowledge base.
+
+   Variables:
+     - TOPIC: The topic/theme of the knowledge being merged
+     - SOURCE_SESSION: The completed session being merged from
+     - TIMESTAMP: When the source session was completed
+   ======================================================= #}
+
+# KB Merge Session: {{ TOPIC }}
 
 ## Context
 
 This session merges knowledge base learnings from a completed session.
 
-- **Source Session**: {{SOURCE_SESSION}}
-- **Completed**: {{TIMESTAMP}}
-- **Learnings Path**: `_AGENTS/knowledge/sessions/{{SOURCE_SESSION}}/learnings.md`
+- **Source Session**: {{ SOURCE_SESSION }}
+- **Completed**: {{ TIMESTAMP }}
+- **Learnings Path**: `_AGENTS/knowledge/sessions/{{ SOURCE_SESSION }}/learnings.md`
 
 ## Acceptance Criteria
 
