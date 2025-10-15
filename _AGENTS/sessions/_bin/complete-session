@@ -13,7 +13,7 @@ if [ -z "$SESSION_SLUG" ]; then
   exit 1
 fi
 
-SESSION_PATH="sessions/active/$SESSION_SLUG"
+SESSION_PATH="_AGENTS/sessions/active/$SESSION_SLUG"
 
 # Verify session exists
 if [ ! -d "$SESSION_PATH" ]; then
@@ -38,15 +38,15 @@ if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
   KB_SESSION="kb-$(date +%Y-%m-%d)-merge-$TOPIC"
   
   # Create KB merge session in drafting first
-  mkdir -p "sessions/drafting/$KB_SESSION"
+  mkdir -p "_AGENTS/sessions/drafting/$KB_SESSION"
   
   # Use template if available, otherwise inline
   if [ -f "_AGENTS/sessions/_templates/kb-merge-SESSION.md" ]; then
     sed -e "s/{{SOURCE_SESSION}}/$SESSION_SLUG/g" \
         -e "s/{{TOPIC}}/$TOPIC/g" \
-        "_AGENTS/sessions/_templates/kb-merge-SESSION.md" > "sessions/drafting/$KB_SESSION/SESSION.md"
+        "_AGENTS/sessions/_templates/kb-merge-SESSION.md" > "_AGENTS/sessions/drafting/$KB_SESSION/SESSION.md"
   else
-    cat > "sessions/drafting/$KB_SESSION/SESSION.md" << EOF
+    cat > "_AGENTS/sessions/drafting/$KB_SESSION/SESSION.md" << EOF
 # KB Merge Session: $TOPIC
 
 ## Context
@@ -71,7 +71,7 @@ if [ -f "_AGENTS/knowledge/sessions/$SESSION_SLUG/learnings.md" ]; then
 EOF
   fi
   
-  git add "sessions/drafting/$KB_SESSION/"
+  git add "_AGENTS/sessions/drafting/$KB_SESSION/"
   git commit -m "[$SESSION_SLUG] Create KB merge session in drafting: $KB_SESSION"
   echo "✅ KB merge session created in drafting: $KB_SESSION"
   echo "📝 Review and move to planned/ when ready for agents to claim"
@@ -79,8 +79,8 @@ fi
 
 # 3. Move to completed
 echo "📁 Moving session to completed/..."
-mv "$SESSION_PATH" sessions/completed/
-git add sessions/
+mv "$SESSION_PATH" _AGENTS/sessions/completed/
+git add _AGENTS/sessions/
 git commit -m "[$SESSION_SLUG] Complete session"
 
 # 4. Merge to main
