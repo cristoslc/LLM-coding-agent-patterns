@@ -32,9 +32,9 @@ We propose integrating the bd issue tracker (https://github.com/cristoslc/llm-be
 
 **Core Changes:**
 
-**Subsession Tracking:** Replace markdown task lists in `subsessions.md` with bd issues. Each subsession becomes a bd issue with explicit dependencies, labels, and status. The bd CLI provides `bd ready` to query unblocked work, and `bd status` to visualize dependency graphs. Cycle detection is automatic.
+**Subsession Tracking:** Replace markdown task lists in `subsessions.md` with bd issues. Each subsession becomes a bd issue that serves as the parent for its constituent tasks. The tasks within a subsession are created as child bd issues, enabling fine-grained tracking with explicit dependencies, labels, and status updates for both subsessions and their tasks. The bd CLI provides `bd ready` to query unblocked work across subsessions and their tasks, and `bd status` to visualize dependency graphs. Cycle detection is automatic.
 
-**TDD Enforcement:** Structure each subsession as a parent issue with child issues for TDD phases (RED, GREEN, REFACTOR, QA). Dependencies between phases create blocking relationships: you cannot start REFACTOR until GREEN is complete. This makes TDD a structural requirement rather than a discipline.
+**TDD Enforcement:** For code-related subsessions, structure the child tasks as TDD phases (RED, GREEN, REFACTOR, QA), each as a separate child issue of the parent subsession issue. Dependencies between these child issues create blocking relationships: you cannot start GREEN until RED is complete, and so on. This makes TDD a structural requirement rather than a mere discipline, ensuring comprehensive coverage within the subsession's task hierarchy.
 
 **Per-Subsession Scratchpads:** Create `scratchpads/` directory with one markdown file per subsession (`scratchpads/subsession-1-setup.md`). This replaces the session-wide `active-plan.md` with scoped thinking space. When working on subsession 3, you only see subsession 3's context.
 
@@ -49,8 +49,8 @@ We propose integrating the bd issue tracker (https://github.com/cristoslc/llm-be
 
 Modify session lifecycle scripts:
 - `session-claim`: Initialize bd database, create scratchpads/ directory, set SESSION.md to read-only
-- `subsession-start`: Create TDD structure in bd, initialize scratchpad file
-- `subsession-complete`: Archive scratchpad, extract learnings from scratchpad+worklog
+- `subsession-start`: Create the parent subsession issue in bd, generate child task issues (structured by TDD for code subsessions or as defined otherwise), initialize scratchpad file
+- `subsession-complete`: Archive scratchpad, extract learnings from scratchpad+worklog, close parent and child issues
 - `work-ready`: Query bd for unblocked work (session-scoped, subsession-scoped, or all)
 - `session-complete`: Validate bd state, create kb-* sessions from learnings, restore SESSION.md writeable
 
