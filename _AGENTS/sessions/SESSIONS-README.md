@@ -59,14 +59,15 @@ Coordination through **git** (no orchestrator):
 ```bash
 # Claim and activate session
 ./_bin/claim-session 2025-10-14-feature-x
+# Note: SESSION.md becomes read-only to preserve original plan
 
 # Activate session environment (in worktree)
 cd .worktrees/2025-10-14-feature-x
 source ../../sessions/active/2025-10-14-feature-x/.session-env
 
-# Work on session...
+# Work on session (use worklog.md, active-plan.md for updates)...
 
-# Complete session
+# Complete session (unlocks SESSION.md for final updates)
 cd ../../..
 ./_bin/complete-session 2025-10-14-feature-x
 ```
@@ -87,6 +88,10 @@ git push origin main  # If fails, pick different session
 mv sessions/planned/2025-10-14-feature-x sessions/active/
 git add sessions/ && git commit -m "[2025-10-14-feature-x] Move to active"
 
+# 3. Set SESSION.md to read-only
+chmod 444 sessions/active/2025-10-14-feature-x/SESSION.md
+git add sessions/active/2025-10-14-feature-x/SESSION.md
+git commit -m "[2025-10-14-feature-x] Set SESSION.md read-only"
 cat > sessions/active/2025-10-14-feature-x/.session-env << 'EOF'
 export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
 export GIT_AUTHOR_EMAIL="cristos+2025-10-14-feature-x@agents.local"
@@ -99,12 +104,12 @@ EOF
 git add sessions/active/2025-10-14-feature-x/.session-env
 git commit -m "[2025-10-14-feature-x] Add session environment"
 
-# 3. Create worktree with session branch (outside sessions/)
+# 4. Create worktree with session branch (outside sessions/)
 git worktree add -b session/2025-10-14-feature-x \
   .worktrees/2025-10-14-feature-x \
   HEAD
 
-# 4. Activate session and start work
+# 5. Activate session and start work
 cd .worktrees/2025-10-14-feature-x
 source ../../sessions/active/2025-10-14-feature-x/.session-env
 
@@ -148,14 +153,24 @@ Session artifacts:
 - KB learnings: _AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md"
 git push origin main
 
-# 5. Remove session from lock and move to completed
+# 5. Unlock SESSION.md for final updates
+chmod 644 sessions/active/2025-10-14-feature-x/SESSION.md
+git add sessions/active/2025-10-14-feature-x/SESSION.md
+git commit -m "[2025-10-14-feature-x] Unlock SESSION.md for final updates"
+
+# 6. Remove session from lock and move to completed
 sed -i '/^2025-10-14-feature-x:/d' .agents/sessions.lock
 git add .agents/sessions.lock
 mv sessions/active/2025-10-14-feature-x sessions/completed/
 git add sessions/ && git commit -m "[2025-10-14-feature-x] Archive session"
 git push origin main
 
-# 6. Cleanup branch and deactivate
+# 7. Set SESSION.md back to read-only in completed
+chmod 444 sessions/completed/2025-10-14-feature-x/SESSION.md
+git add sessions/completed/2025-10-14-feature-x/SESSION.md
+git commit -m "[2025-10-14-feature-x] Set SESSION.md read-only in completed"
+
+# 8. Cleanup branch and deactivate
 git branch -d session/2025-10-14-feature-x
 unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
 unset SESSION_SLUG SESSION_ID
@@ -222,6 +237,53 @@ sessions/
 | **Completed** | `completed/` | Successfully finished and merged |
 | **Abandoned** | `abandoned/` | Cancelled or incomplete, documented |
 
+### SESSION.md Read-Only Protection
+
+**Purpose: Drift Tracking**
+- SESSION.md files become **read-only** when sessions move to `active/`
+- This preserves the original plan for drift analysis
+- Compare original plan vs. actual work to identify scope changes
+- Learn from planning inaccuracies for future sessions
+
+**When SESSION.md is Read-Only:**
+- In `active/` sessions: **Read-only** (chmod 444)
+- In `completed/` sessions: **Read-only** (chmod 444)
+- In `planned/` and `drafting/`: **Writable** (chmod 644)
+
+**Update Channels During Active Work:**
+- `worklog.md` - Progress, decisions, timestamps
+- `active-plan.md` - Current tasks, issues, next steps
+- `subsessions.md` - Scope additions (creates new sessions)
+
+**Unlock Process (Completion Only):**
+1. `complete-session` script unlocks SESSION.md for final updates
+2. Agent can add final notes if needed
+3. SESSION.md becomes read-only again in `completed/`
+
+**Override (Emergency Only):**
+```bash
+# Emergency fix only
+chmod 644 sessions/active/{session-slug}/SESSION.md
+# Make critical fix
+git add sessions/active/{session-slug}/SESSION.md
+git commit -m "[{session-slug}] OVERRIDE: Fix critical SESSION.md error"
+chmod 444 sessions/active/{session-slug}/SESSION.md
+# Document reason in worklog.md
+```
+
+**Why This Matters:**
+- Enables drift analysis between planned vs. actual work
+- Catches scope creep early
+- Improves future session planning accuracy
+- Maintains audit trail of original intent
+
+**FAQ: Why is SESSION.md read-only?**
+- **Answer:** To preserve the original plan for drift analysis. By keeping SESSION.md unchanged, we can compare what was planned vs. what actually happened, identify scope creep, and learn from planning inaccuracies.
+
+**FAQ: How do I track scope changes?**
+- **Answer:** Use `worklog.md` for progress updates, `active-plan.md` for task changes, and `subsessions.md` for scope additions that create new sessions. These files are writable during active work.
+
+>>>>>>> cursor/review-and-start-align-session-templates-605d
 ### Session Activation & Claiming
 
 Agent identity is established per-session via environment variables. The `claim-session` script creates a `.session-env` file in the session directory.

@@ -55,6 +55,17 @@ if git push origin main; then
   mv _AGENTS/sessions/planned/$SESSION_SLUG _AGENTS/sessions/active/
   git add _AGENTS/sessions/
   git commit -m "[$SESSION_SLUG] Move to active"
+
+  # Step 6.5: Set SESSION.md to read-only
+  echo "🔒 Setting SESSION.md to read-only..."
+  if chmod 444 _AGENTS/sessions/active/$SESSION_SLUG/SESSION.md 2>/dev/null; then
+    echo "📝 SESSION.md is now read-only to preserve original plan"
+    echo "   Use worklog.md and active-plan.md for updates during session"
+    git add _AGENTS/sessions/active/$SESSION_SLUG/SESSION.md
+    git commit -m "[$SESSION_SLUG] Set SESSION.md read-only"
+  else
+    echo "⚠️  Warning: Could not set SESSION.md to read-only (continuing anyway)"
+  fi
   
   # Step 7: Create session activation file and commit
   echo "🔑 Creating session environment..."
