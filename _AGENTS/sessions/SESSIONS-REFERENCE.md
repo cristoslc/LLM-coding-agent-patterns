@@ -92,31 +92,105 @@ The `_templates/` directory contains Jinja2 templates for creating consistent se
 Template for standard sessions with comprehensive structure and protocol compliance.
 
 **Template Variables:**
-- `SESSION_SLUG` - Session identifier
+- `SESSION_SLUG` - Session identifier (e.g., "2025-10-14-auth-system")
 - `CONTEXT` - Brief description of what needs to be done
-- `PROBLEM_STATEMENT` - Detailed analysis of the problem
+- `PROBLEM_STATEMENT` - Detailed analysis of the problem with specific examples
 - `ACCEPTANCE_CRITERIA` - List of specific, measurable criteria
-- `IMPLEMENTATION_PLAN` - Step-by-step execution plan
-- `SUCCESS_METRICS` - How to measure success
-- `RISKS` - Potential risks and mitigation strategies
+- `IMPLEMENTATION_PLAN` - Flexible step-by-step execution plan
+- `SUCCESS_METRICS` - How to measure success with specific examples
+- `RISKS` - Potential risks and mitigation strategies with impact assessment
 - `DEPENDENCIES` - Required resources and knowledge
+- `EDGE_CASES` - Specific edge cases to consider
+- `NOTES` - Additional guidance and considerations
 
 **Usage:**
 ```bash
 # Automatically used by session creation tools
 # Manual creation if needed:
 sed -e "s/{{SESSION_SLUG}}/2025-10-14-auth-system/g" \
-    -e "s/{{CONTEXT}}/Implement JWT-based authentication system/g" \
-    -e "s/{{PROBLEM_STATEMENT}}/Current auth system lacks security.../g" \
+    -e "s/{{CONTEXT}}/The claim-session and complete-session scripts need to be improved to handle edge cases and ensure consistency/g" \
+    -e "s/{{PROBLEM_STATEMENT}}/The current implementation lacks proper error handling for file operations and git validation.../g" \
     "_templates/SESSION.md.j2" > "sessions/planned/2025-10-14-auth-system/SESSION.md"
 ```
 
 **Structure Includes:**
-- Comprehensive context and problem analysis
-- Phased implementation plan with timeline
-- Success metrics and risk mitigation
-- Edge case considerations
-- Protocol compliance notes
+- **Context**: Clear problem statement with specific examples
+- **Problem Statement**: Detailed analysis of issues with concrete examples
+- **Acceptance Criteria**: Specific, measurable checklist items
+- **Implementation Plan**: Flexible step-by-step approach without rigid timelines
+- **Success Metrics**: Quantifiable measures with baseline values where applicable
+- **Risks & Mitigations**: Specific risks with concrete mitigation strategies
+- **Dependencies**: Clear resource and knowledge requirements
+- **Edge Cases**: Specific scenarios to consider during implementation
+- **Notes**: Additional guidance for agents working on the session
+
+**Example Session Content:**
+```markdown
+# Session: 2025-10-14-fix-session-scripts
+
+## Context
+The claim-session and complete-session scripts need to be improved to handle edge cases and ensure consistency. This session will address the identified issues in both scripts.
+
+## Problem Statement
+The current implementation of the session management scripts has several reliability and consistency issues:
+- Claim-Session Script Issues: Assumes .agents/sessions.lock file exists and is writable, doesn't handle case where SESSION.md file doesn't exist, doesn't validate session branch doesn't already exist
+- Complete-Session Script Issues: Assumes .agents/sessions.lock file exists and is writable, doesn't handle case where SESSION.md file doesn't exist, doesn't validate session branch exists
+- Consistency Issues: Different approaches to handle file permissions, inconsistent error handling, inconsistent user feedback
+
+## Acceptance Criteria
+- [ ] Add error handling for all file operations in both scripts
+- [ ] Add validation for all git operations in both scripts
+- [ ] Ensure consistency in error handling and user feedback
+- [ ] Add documentation for both scripts
+- [ ] Add tests for both scripts to ensure they work as expected in all edge cases
+- [ ] Verify that both scripts work correctly in all edge cases
+
+## Implementation Plan
+1. Review both scripts to identify all potential edge cases
+2. Add error handling for all file operations
+3. Add validation for all git operations
+4. Ensure consistency in error handling and user feedback
+5. Add documentation for both scripts
+6. Add tests for both scripts
+7. Verify that both scripts work correctly in all edge cases
+8. Create KB merge session if needed
+
+## Success Metrics
+- Zero unhandled errors in both scripts
+- Consistent error handling patterns across scripts
+- Comprehensive test coverage (>90% of code paths)
+- All edge cases handled gracefully
+
+## Risks & Mitigations
+- **Risk:** Changes might break existing session workflows
+  **Mitigation:** Extensive testing with backup/rollback procedures
+  **Impact:** Medium - could block agent work temporarily
+
+- **Risk:** Error handling might make scripts slower
+  **Mitigation:** Performance testing and optimization of critical paths
+  **Impact:** Low - acceptable trade-off for reliability
+
+## Dependencies
+- Access to test repositories for validation
+- Understanding of current session protocol requirements
+- Knowledge of git worktree and branch management
+- Familiarity with shell scripting best practices
+
+## Edge Cases to Consider
+- Git repository not in clean state when claiming/completing sessions
+- User doesn't have write permissions to required files/directories
+- Git remote not accessible during operations
+- Session directory structure is corrupted or incomplete
+- Concurrent access to session files (race conditions)
+- Disk space issues during worktree creation
+- Network connectivity issues during git operations
+
+## Notes
+- Keep solution simple and maintainable
+- Prioritize reliability over performance for critical operations
+- Document all changes thoroughly for future maintenance
+- Test with actual session scenarios before finalizing
+```
 
 ### kb-merge-SESSION.md
 

@@ -5,86 +5,119 @@
      for the Agent Sessions Protocol with all required sections
      and detailed guidance for multi-agent collaboration.
 
-   Variables:
-     - SESSION_SLUG: The unique identifier for the session
-     - CONTEXT: Brief description of what needs to be done
-     - PROBLEM_STATEMENT: Detailed analysis of the problem
-     - ACCEPTANCE_CRITERIA: List of specific, measurable criteria
-     - IMPLEMENTATION_PLAN: Step-by-step plan for execution
-     - SUCCESS_METRICS: How to measure success
-     - RISKS: Potential risks and mitigation strategies
-     - DEPENDENCIES: Required resources and knowledge
+   For the model:
+     - This template is a **spec**, not a literal prompt.
+     - You must read and follow its structure and tone
+       when generating new sessions based on context.
+     - Final output must be clean Markdown (no braces, comments, or code).
+     - Write clearly, concisely, and persuasively for agents.
+     - Retain all section headings, even if a section is "Not applicable".
+
+   Style guidance:
+     - Write in a professional but approachable tone.
+     - Each section should provide actionable guidance.
+     - Use specific examples where helpful.
+     - Focus on what needs to be done, not rigid timelines.
    ======================================================= #}
 
 # Session: {{ SESSION_SLUG }}
 
 ## Context
 {{ CONTEXT }}
+{# Example: The claim-session and complete-session scripts need to be improved to handle edge cases and ensure consistency. This session will address the identified issues in both scripts. #}
 
 ## Problem Statement
 {{ PROBLEM_STATEMENT }}
+{# Example: The current implementation of the session management scripts has several reliability and consistency issues that need to be addressed. These scripts handle the atomic claiming and completion of sessions, which are fundamental operations for multi-agent coordination. However, they lack proper error handling, validation, and consistency in their approach to file operations and git commands. #}
 
 ## Acceptance Criteria
 {% for criterion in ACCEPTANCE_CRITERIA %}
 - [ ] {{ criterion }}
 {% endfor %}
+{# Example:
+- [ ] Add error handling for all file operations in both scripts
+- [ ] Add validation for all git operations in both scripts
+- [ ] Ensure consistency in error handling and user feedback
+- [ ] Add documentation for both scripts
+- [ ] Add tests for both scripts to ensure they work as expected in all edge cases
+- [ ] Verify that both scripts work correctly in all edge cases
+#}
 
 ## Implementation Plan
-
-### Phase 1: Analysis and Planning (Day 1)
-1. **Comprehensive Analysis**: Review all relevant code, documentation, and requirements
-2. **Stakeholder Identification**: Identify who needs to be involved or consulted
-3. **Risk Assessment**: Identify potential challenges and mitigation strategies
-4. **Resource Planning**: Ensure all required tools and access are available
-
-### Phase 2: Core Implementation (Days 2-3)
-5. **Foundation Work**: Establish the basic framework and structure
-6. **Core Functionality**: Implement the primary features or fixes
-7. **Integration Points**: Connect with existing systems and processes
-8. **Initial Testing**: Validate basic functionality works as expected
-
-### Phase 3: Refinement and Testing (Days 4-5)
-9. **Edge Case Handling**: Address all identified edge cases and error conditions
-10. **Performance Optimization**: Ensure the solution meets performance requirements
-11. **Comprehensive Testing**: Execute full test suite including integration tests
-12. **Documentation Updates**: Update all relevant documentation
-
-### Phase 4: Final Validation and Delivery (Day 6)
-13. **Final Verification**: Complete end-to-end testing and validation
-14. **Code Review**: Ensure code quality and adherence to standards
-15. **Deployment Preparation**: Prepare for production deployment if applicable
-16. **Knowledge Capture**: Document learnings and create KB merge session if needed
+{{ IMPLEMENTATION_PLAN }}
+{# Example:
+1. Review both scripts to identify all potential edge cases
+2. Add error handling for all file operations
+3. Add validation for all git operations
+4. Ensure consistency in error handling and user feedback
+5. Add documentation for both scripts
+6. Add tests for both scripts
+7. Verify that both scripts work correctly in all edge cases
+8. Create KB merge session if needed
+#}
 
 ## Success Metrics
-{% for metric in SUCCESS_METRICS %}
-- **{{ metric.name }}**: {{ metric.description }}
-{% endfor %}
+{{ SUCCESS_METRICS }}
+{# Example:
+- Zero unhandled errors in both scripts
+- Consistent error handling patterns across scripts
+- Comprehensive test coverage (>90% of code paths)
+- All edge cases handled gracefully
+#}
 
-## Risks and Mitigation
-{% for risk in RISKS %}
-- **Risk**: {{ risk.description }}
-  - **Mitigation**: {{ risk.mitigation }}
-  - **Impact**: {{ risk.impact }}
-{% endfor %}
+## Risks & Mitigations
+{{ RISKS }}
+{# Example:
+- **Risk:** Changes might break existing session workflows
+  **Mitigation:** Extensive testing with backup/rollback procedures
+  **Impact:** Medium - could block agent work temporarily
+
+- **Risk:** Error handling might make scripts slower
+  **Mitigation:** Performance testing and optimization of critical paths
+  **Impact:** Low - acceptable trade-off for reliability
+#}
 
 ## Dependencies
-{% for dependency in DEPENDENCIES %}
-- **{{ dependency.type }}**: {{ dependency.description }}
-{% endfor %}
+{{ DEPENDENCIES }}
+{# Example:
+- Access to test repositories for validation
+- Understanding of current session protocol requirements
+- Knowledge of git worktree and branch management
+- Familiarity with shell scripting best practices
+#}
 
 ## Edge Cases to Consider
-- **Git Repository State**: Handle cases where repository is not in clean state
-- **Permission Issues**: Account for insufficient file or directory permissions
-- **Network Connectivity**: Handle offline or poor network conditions
-- **Concurrent Access**: Manage race conditions and simultaneous operations
-- **Resource Constraints**: Address disk space, memory, or processing limitations
-- **External Dependencies**: Handle unavailable or changed external services
-- **Data Corruption**: Manage corrupted or incomplete data scenarios
-- **User Input Validation**: Validate all user inputs and configurations
+{{ EDGE_CASES }}
+{# Example:
+- Git repository not in clean state when claiming/completing sessions
+- User doesn't have write permissions to required files/directories
+- Git remote not accessible during operations
+- Session directory structure is corrupted or incomplete
+- Concurrent access to session files (race conditions)
+- Disk space issues during worktree creation
+- Network connectivity issues during git operations
+#}
 
-## Original Implementation Plan
-{{ IMPLEMENTATION_PLAN }}
+## Notes
+{{ NOTES }}
+{# Example:
+- Keep solution simple and maintainable
+- Prioritize reliability over performance for critical operations
+- Document all changes thoroughly for future maintenance
+- Test with actual session scenarios before finalizing
+#}
 
 ---
 
 **Note**: This session follows the Agent Sessions Protocol. SESSION.md becomes read-only when the session moves to active state. Use worklog.md for progress updates and active-plan.md for dynamic task management during active work.
+
+{# =======================================================
+CHECKLIST FOR LLM (not part of final session):
+- [ ] All placeholders replaced with specific, contextual content
+- [ ] Sections provide actionable guidance for agents
+- [ ] Acceptance criteria are specific and measurable
+- [ ] Implementation plan is clear and flexible
+- [ ] Risks and mitigations are realistic and specific
+- [ ] No template syntax or comments remain in final output
+- [ ] Tone is professional and helpful for multi-agent collaboration
+======================================================= #}
