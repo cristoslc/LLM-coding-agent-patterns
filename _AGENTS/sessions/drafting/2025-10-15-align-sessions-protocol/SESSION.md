@@ -56,6 +56,17 @@ This session conducts a comprehensive review and alignment of:
 - [ ] Remove outdated or incorrect information
 - [ ] Improve readability and scannability
 
+### Read-Only SESSION.md Protection
+- [ ] Update workflow to make SESSION.md read-only when session moves to active/
+- [ ] Add file permissions handling to claim-session script
+- [ ] Add file permissions handling to complete-session script
+- [ ] Add clear instructions in documentation about SESSION.md being read-only
+- [ ] Document that all updates should happen in worklog.md, active-plan.md, subsessions.md
+- [ ] Explain purpose: preserve original plan/goals to track drift
+- [ ] Unlock SESSION.md only when moving to completed/ for final updates
+- [ ] Test that LLMs receive clear error messages when trying to edit SESSION.md
+- [ ] Update templates to reflect this constraint
+
 ## Original Implementation Plan
 
 ### Phase 1: Inventory & Assessment (1 hour)
@@ -169,7 +180,37 @@ This session conducts a comprehensive review and alignment of:
    - Consistent style
    - Scannable content
 
-### Phase 6: Final Validation & Documentation (30 minutes)
+### Phase 6: Implement Read-Only SESSION.md Protection (1.5 hours)
+
+1. **Update claim-session script**
+   - Add `chmod 444` for SESSION.md after moving to active/
+   - Add clear output message about read-only status
+   - Test file permissions are set correctly
+
+2. **Update complete-session script**
+   - Add `chmod 644` for SESSION.md before moving to completed/
+   - Allow final updates to SESSION.md if needed
+   - Set back to read-only in completed/
+
+3. **Update documentation**
+   - Add section explaining SESSION.md read-only protection
+   - Document purpose: preserve original plan to track drift
+   - Explain that updates go to worklog.md, active-plan.md, subsessions.md
+   - Add troubleshooting for file permission issues
+   - Update session workflow diagrams if needed
+
+4. **Update templates**
+   - Add notes in session templates about read-only status
+   - Update instructions for agents working on sessions
+   - Add reminders to use worklog/active-plan for updates
+
+5. **Test and validate**
+   - Test claim-session sets permissions correctly
+   - Test complete-session unlocks correctly
+   - Verify clear error messages when attempting to edit
+   - Ensure manual override path is documented
+
+### Phase 7: Final Validation & Documentation (30 minutes)
 
 1. **Final pass review**
    - Read through all modified files
@@ -197,6 +238,7 @@ This session conducts a comprehensive review and alignment of:
 3. **Clarity**: New users should be able to follow the protocol without confusion
 4. **Completeness**: All workflows should be documented end-to-end
 5. **Accuracy**: Documentation must match actual implementation
+6. **Drift Prevention**: Implement read-only SESSION.md to preserve original plan/goals and enable tracking of scope changes through subsessions and worklog
 
 ### Expected Outcomes
 
@@ -206,6 +248,8 @@ This session conducts a comprehensive review and alignment of:
 - Templates work seamlessly with scripts
 - New users can easily understand and follow the protocol
 - No contradictory or outdated information remains
+- SESSION.md files are protected from modification during active sessions
+- Original plan/goals preserved for drift analysis
 
 ### Potential Challenges
 
