@@ -20,4 +20,8 @@ This was part of the original `2025-10-15-align-sessions-protocol` acceptance cr
 **Why This Matters:**
 Preserving the original plan enables drift analysis - comparing what was planned vs. what actually happened. This helps improve future session planning and catches scope creep early.
 
-**Session Status:** Drafting - ready for review and move to planned/
+## [2025-10-15] Status Update
+
+Session moved from **drafting** to **planned** status. Ready for agent to claim and begin work.
+
+**Session Status:** Planned - ready for agent to claim
