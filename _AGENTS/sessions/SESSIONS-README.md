@@ -63,7 +63,7 @@ Coordination through **git** (no orchestrator):
 
 # Activate session environment (in session clone)
 cd .sessions/2025-10-14-feature-x
-source .session-env
+source ../../sessions/active/2025-10-14-feature-x/.session-env
 
 # Work on session (use worklog.md, active-plan.md for updates)...
 
@@ -72,114 +72,18 @@ cd ../..
 ./_bin/complete-session 2025-10-14-feature-x
 ```
 
-### Manual Process (Advanced)
+### Manual Session Management
 
-#### Starting a Session
+For advanced users who need to understand the underlying process, see the detailed procedures in [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#detailed-implementation-examples).
 
-```bash
-# 1. Claim session
-git pull origin main
-echo "2025-10-14-feature-x:$(date +%s)" >> .agents/sessions.lock
-git add .agents/sessions.lock
-git commit -m "[2025-10-14-feature-x] Claim session"
-git push origin main  # If fails, pick different session
+The manual process involves:
+1. **Session claiming** via `sessions/_bin/claim-session`
+2. **Session clone creation** in `.sessions/` directory
+3. **Environment activation** for agent identity
+4. **Work completion** with documentation updates
+5. **Session cleanup** via `sessions/_bin/complete-session`
 
-# 2. Move to active and create activation file
-mv sessions/planned/2025-10-14-feature-x sessions/active/
-git add sessions/ && git commit -m "[2025-10-14-feature-x] Move to active"
-
-# 3. Set SESSION.md to read-only
-chmod 444 sessions/active/2025-10-14-feature-x/SESSION.md
-git add sessions/active/2025-10-14-feature-x/SESSION.md
-git commit -m "[2025-10-14-feature-x] Set SESSION.md read-only"
-cat > sessions/active/2025-10-14-feature-x/.session-env << 'EOF'
-export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
-export GIT_AUTHOR_EMAIL="cristos+2025-10-14-feature-x@agents.local"
-export GIT_COMMITTER_NAME="Session-2025-10-14-feature-x (via cristos)"
-export GIT_COMMITTER_EMAIL="cristos+2025-10-14-feature-x@agents.local"
-export SESSION_ID="2025-10-14-feature-x"
-export SESSION_SLUG="2025-10-14-feature-x"
-EOF
-
-git add sessions/active/2025-10-14-feature-x/.session-env
-git commit -m "[2025-10-14-feature-x] Add session environment"
-
-# 4. Create session clone with session branch (outside sessions/)
-git clone --depth 1 --single-branch --branch main \
-  . .sessions/2025-10-14-feature-x
-cd .sessions/2025-10-14-feature-x
-git checkout -b session/2025-10-14-feature-x
-git remote rename origin upstream
-
-# 5. Activate session and start work
-source ../../sessions/active/2025-10-14-feature-x/.session-env
-
-# Now working in isolated session clone!
-```
-
-#### Completing a Session
-
-```bash
-# 1. Finalize documentation (worklog, active-plan, generate patch)
-cd .sessions/2025-10-14-feature-x
-git format-patch main --stdout > ../../sessions/active/2025-10-14-feature-x/2025-10-14-feature-x.patch
-
-# 2. Check for KB learnings and create KB merge session if exists
-if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
-  # Create KB merge session in drafting/
-  # [Use KB merge session template]
-fi
-
-# 3. Return to main repo and remove session clone
-cd ../..  # Back to repo root
-rm -rf .sessions/2025-10-14-feature-x
-
-# 4. Merge to main
-git pull origin main
-git merge --squash session/2025-10-14-feature-x
-git commit -m "[2025-10-14-feature-x] Session complete: Implement user authentication system
-
-- Added JWT-based authentication with refresh tokens
-- Created User model with bcrypt password hashing
-- Implemented login/logout endpoints with proper validation
-- Added middleware for protected routes
-- Created comprehensive test suite (95% coverage)
-- Updated API documentation with auth examples
-- Resolved security vulnerabilities in password handling
-
-Session artifacts:
-- 12 files changed, 847 insertions(+), 23 deletions(-)
-- Patch: sessions/completed/2025-10-14-feature-x/2025-10-14-feature-x.patch
-- Worklog: sessions/completed/2025-10-14-feature-x/worklog.md
-- KB learnings: _AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md"
-git push origin main
-
-# 5. Unlock SESSION.md for final updates
-chmod 644 sessions/active/2025-10-14-feature-x/SESSION.md
-git add sessions/active/2025-10-14-feature-x/SESSION.md
-git commit -m "[2025-10-14-feature-x] Unlock SESSION.md for final updates"
-
-# 6. Remove session from lock and move to completed
-sed -i '/^2025-10-14-feature-x:/d' .agents/sessions.lock
-git add .agents/sessions.lock
-mv sessions/active/2025-10-14-feature-x sessions/completed/
-git add sessions/ && git commit -m "[2025-10-14-feature-x] Archive session"
-git push origin main
-
-# 7. Set SESSION.md back to read-only in completed
-chmod 444 sessions/completed/2025-10-14-feature-x/SESSION.md
-git add sessions/completed/2025-10-14-feature-x/SESSION.md
-git commit -m "[2025-10-14-feature-x] Set SESSION.md read-only in completed"
-
-# 8. Cleanup branch and deactivate
-git branch -d session/2025-10-14-feature-x
-unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
-unset SESSION_SLUG SESSION_ID
-
-# Session context ended
-```
-
-See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete examples.
+All manual procedures are implemented in the utility scripts mentioned above.
 
 ## Implementation SOP
 
@@ -187,27 +91,21 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#quick-reference) for complete 
 
 1. **Git as Coordinator** - Use git itself for synchronization (no external orchestrator)
 2. **Session-Scoped Activation** - Agent identity via environment variables, session lifecycle
-3. **Namespace Isolation** - Each session works in separate worktrees/branches
-4. **Optimistic Locking** - Session claims via atomic git operations
-5. **Full Traceability** - Every commit attributed to specific agent
-6. **Two-Phase Knowledge** - Capture learnings fast, merge deliberately via KB sessions
+3. **Hub-Spoke Architecture** - Main repo as hub, session clones as isolated spokes
+4. **Complete Isolation** - Each session works in independent repository clone
+5. **Optimistic Locking** - Session claims via atomic git operations
+6. **Full Traceability** - Every commit attributed to specific agent
+7. **Two-Phase Knowledge** - Capture learnings fast, merge deliberately via KB sessions
 
 ### Directory Structure
 
 ```
-.agents/
-└── sessions.lock    # Active session claims (session-id:timestamp)
-
-.worktrees/          # Git worktrees (isolated workspaces)
-├── 2025-10-14-auth-system/     # Full repo copy for this session
-├── 2025-10-14-api-work/        # Full repo copy for this session
-└── ...
-
-sessions/
-├── _bin/            # Utility scripts
+_AGENTS/sessions/
+├── sessions.lock     # Active session claims (session-id:timestamp)
+├── _bin/             # Utility scripts
 │   ├── claim-session
 │   └── complete-session
-├── _templates/      # Templates for sessions and configs
+├── _templates/       # Templates for sessions and configs
 │   ├── SESSION.md.j2           # Standard session template
 │   ├── kb-merge-SESSION.md     # KB merge session template
 │   └── session-env.template    # Session environment template
@@ -225,6 +123,11 @@ sessions/
 ├── completed/       # Finished sessions (all agents)
 ├── drafting/        # Sessions being defined (not ready for agents)
 └── planned/         # Ready to claim (agents monitor this)
+
+.sessions/              # Session clones (isolated workspaces)
+├── 2025-10-14-auth-system/     # Shallow clone for this session
+├── 2025-10-14-api-work/        # Shallow clone for this session
+└── ...
 ```
 
 **Utilities** (`_bin/`, `_templates/`) sort first, keeping them separate from **state directories** (`abandoned/`, `active/`, `completed/`, `drafting/`, `planned/`).
