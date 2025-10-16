@@ -104,6 +104,7 @@ The manual process involves:
 
 ```
 _AGENTS/sessions/
+├── .gitignore        # Local gitignore for session-specific patterns
 ├── sessions.lock     # Active session claims (session-id:timestamp)
 ├── _bin/             # Utility scripts
 │   ├── claim-session
@@ -118,13 +119,13 @@ _AGENTS/sessions/
 ├── active/          # Currently active sessions (metadata only)
 │   ├── 2025-10-14-auth-system/
 │   │   ├── .session-env
-│   │   ├── .codebase/           # Shallow clone for this session
+│   │   ├── .codebase/           # Shallow clone for this session (ignored)
 │   │   ├── SESSION.md
 │   │   ├── worklog.md
 │   │   └── active-plan.md
 │   ├── 2025-10-14-api-work/
 │   │   ├── .session-env
-│   │   ├── .codebase/           # Shallow clone for this session
+│   │   ├── .codebase/           # Shallow clone for this session (ignored)
 │   │   └── ...
 │   └── ...
 ├── completed/       # Finished sessions (all agents)
@@ -133,9 +134,29 @@ _AGENTS/sessions/
 
 # Note: Session clones live as .codebase/ within each session directory
 # Example: active/2025-10-14-auth-system/.codebase/ contains the shallow clone
+# The .codebase/ directories are ignored via the local .gitignore file
 ```
 
 **Utilities** (`_bin/`, `_templates/`) sort first, keeping them separate from **state directories** (`abandoned/`, `active/`, `completed/`, `drafting/`, `planned/`).
+
+### Local .gitignore Strategy
+
+The `_AGENTS/sessions/.gitignore` file provides **session-specific ignore patterns** that are:
+
+- **Local to the sessions directory** - Keeps session ignore rules separate from main project
+- **Version controlled** - Shared across all developers and agents
+- **Scoped to session artifacts** - Ignores `.codebase/` clones, temporary files, build artifacts
+- **Overrides project-level patterns** - More specific than root `.gitignore`
+
+**Key patterns ignored:**
+- `*/.codebase/` - Session clones (the most important pattern)
+- `sessions.lock` - Session lock file
+- Temporary files (`*.tmp`, `*.swp`, `*~`)
+- IDE files (`.vscode/`, `.idea/`)
+- Build artifacts (`build/`, `dist/`, `target/`)
+- OS files (`.DS_Store`, `Thumbs.db`)
+
+This approach keeps session-specific artifacts out of git while maintaining clean separation between session management and the main codebase.
 
 ### Session States
 

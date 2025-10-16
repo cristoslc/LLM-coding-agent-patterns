@@ -1,0 +1,56 @@
+# Session-specific gitignore for hub-spoke architecture
+# This file ignores session clones and other session-specific artifacts
+
+# Session clones (shallow clones within each session directory)
+*/.codebase/
+
+# Session lock file (managed by session scripts)
+sessions.lock
+
+# Temporary session files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE and editor files (session-specific)
+.vscode/
+.idea/
+*.sublime-*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Log files
+*.log
+
+# Cache directories
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node modules (if any sessions use Node.js)
+node_modules/
+
+# Build artifacts (if any sessions build projects)
+build/
+dist/
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Environment files (except the main .session-env)
+*.env.local
+*.env.*.local
