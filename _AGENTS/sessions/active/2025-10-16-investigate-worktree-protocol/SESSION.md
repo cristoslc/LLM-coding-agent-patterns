@@ -38,23 +38,25 @@ These violations suggest fundamental issues with either:
 3. **Analyze File Creation Patterns**: Document where files were created vs where they should have been created
 4. **Review Protocol Documentation**: Examine current SESSIONS-README.md and SESSIONS-REFERENCE.md for worktree guidance
 
-### Phase 2: Documentation Enhancement (Day 2)
-5. **Enhance Worktree Documentation**: Add clear, explicit instructions about worktree usage
-6. **Create Step-by-Step Guides**: Develop detailed procedures for worktree creation and usage
-7. **Add Examples and Warnings**: Include concrete examples of proper worktree usage and warnings about common mistakes
-8. **Update Session Templates**: Modify session templates to include worktree protocol checkpoints
+### Phase 2: Design and Implement Passive Restraints (Day 2-3)
+5. **Design and Install Git Hooks**: Define and implement pre-commit and pre-push Git hooks to enforce branch adherence and worktree usage. Crucially, design an installation method that *appends* to or *integrates with* any pre-existing hooks, rather than overwriting them.
+6. **Enhance Shell Environment**: Modify the `PS1` prompt to display the current Git branch and worktree status.
+7. **Implement Environment Variable Enforcement**: Define and enforce `SESSION_SLUG`, `SESSION_BRANCH`, and `SESSION_DIR` variables in the session environment.
+8. **Develop Agent Awareness Guidelines**: Create explicit instructions for agents to check the `PS1` prompt and environment variables for their operational context, and to source the session environment if not active.
+9. **Establish File System Guardrails**: Define rules for allowed file creation locations within the worktree.
+10. **Investigate Temporary User with Restricted Permissions**: Research the feasibility of creating a temporary, platform-agnostic (macOS, Linux, Windows) user with permissions restricted to only the worktree, and read-only access to other repository files, to prevent unauthorized edits.
+11. **Evaluate Per-Session Cloning as an Alternative**: Investigate the feasibility and implications of dropping Git worktrees in favor of creating a fresh clone of the repository for each session, to ensure complete isolation and prevent cross-session interference. This would be an alternative to worktree-specific guardrails.
 
-### Phase 3: Validation and Safeguards (Day 3)
-9. **Create Validation Scripts**: Develop scripts to verify worktree is being used correctly
-10. **Implement PWD Anchoring**: Create mechanisms to prevent working directory confusion
-11. **Add Protocol Checkpoints**: Insert validation steps in session workflows
-12. **Test Prevention Mechanisms**: Verify that new safeguards prevent protocol violations
+### Phase 3: Integrate and Validate Passive Restraints (Day 4-5)
+10. **Integrate Passive Restraints**: Apply the designed Git hooks, shell environment enhancements, and file system guardrails into the Agent Sessions Protocol.
+11. **Update Session Scripts**: Modify `claim-session` and `complete-session` scripts to leverage and validate against the new passive restraints.
+12. **Create Validation Test Cases**: Develop automated tests to verify that the implemented passive restraints successfully prevent protocol violations (e.g., committing to the wrong branch, creating files outside the worktree).
+13. **Document Remediation Strategies**: Update `SESSIONS-REFERENCE.md` with detailed documentation of the new passive restraint mechanisms and their usage.
 
-### Phase 4: Integration and Testing (Day 4)
-13. **Update Session Scripts**: Modify claim-session and complete-session scripts with worktree validation
-14. **Create Test Cases**: Develop tests to verify protocol compliance
-15. **Document Learnings**: Create comprehensive documentation of findings and solutions
-16. **Create KB Merge Session**: If significant knowledge is captured, create KB merge session
+### Phase 4: Refinement and Knowledge Transfer (Day 6)
+14. **Refine Agent Guidance**: Based on testing, refine the agent's internal guidance and `.roo/rules` to ensure optimal interaction with the new passive restraints.
+15. **Document Learnings**: Create comprehensive documentation of findings, implemented solutions, and best practices for future agent development.
+16. **Create KB Merge Session**: If significant knowledge is captured, create a KB merge session to integrate these findings into the broader knowledge base.
 
 ## Success Metrics
 - **Zero protocol violations**: Future sessions consistently follow worktree protocol
