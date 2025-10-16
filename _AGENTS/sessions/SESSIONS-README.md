@@ -61,14 +61,14 @@ Coordination through **git** (no orchestrator):
 ./_bin/claim-session 2025-10-14-feature-x
 # Note: SESSION.md becomes read-only to preserve original plan
 
-# Activate session environment (in session clone)
-cd .sessions/2025-10-14-feature-x
-source ../../sessions/active/2025-10-14-feature-x/.session-env
+# Activate session environment (in session codebase)
+cd _AGENTS/sessions/active/2025-10-14-feature-x/.codebase
+source ../.session-env
 
 # Work on session (use worklog.md, active-plan.md for updates)...
 
 # Complete session (unlocks SESSION.md for final updates)
-cd ../..
+cd ../../../../..
 ./_bin/complete-session 2025-10-14-feature-x
 ```
 
@@ -78,10 +78,11 @@ For advanced users who need to understand the underlying process, see the detail
 
 The manual process involves:
 1. **Session claiming** - Update main repository, atomically claim session via git push, move to active, create environment file
-2. **Session clone creation** - Create shallow clone in `.sessions/` directory, create session branch, configure remote
+2. **Session clone creation** - Create shallow clone in `{session-slug}/.codebase/` within session directory, create session branch, configure remote
 3. **Environment activation** - Source session environment to establish agent identity
 4. **Work completion** - Make changes, update documentation, capture learnings
-5. **Session cleanup** - Generate patch, merge to main, archive session, remove clone
+5. **Session cleanup** - Generate patch, merge to main, archive session, remove clone, update lock file
+6. **Session cancellation** - Document reasons, move to abandoned, remove clone, update lock file
 
 **Automation:** The complete manual procedure is implemented in:
 - `sessions/_bin/claim-session` - Automates steps 1-3
@@ -117,19 +118,21 @@ _AGENTS/sessions/
 ├── active/          # Currently active sessions (metadata only)
 │   ├── 2025-10-14-auth-system/
 │   │   ├── .session-env
+│   │   ├── .codebase/           # Shallow clone for this session
 │   │   ├── SESSION.md
 │   │   ├── worklog.md
 │   │   └── active-plan.md
 │   ├── 2025-10-14-api-work/
+│   │   ├── .session-env
+│   │   ├── .codebase/           # Shallow clone for this session
+│   │   └── ...
 │   └── ...
 ├── completed/       # Finished sessions (all agents)
 ├── drafting/        # Sessions being defined (not ready for agents)
 └── planned/         # Ready to claim (agents monitor this)
 
-.sessions/              # Session clones (isolated workspaces)
-├── 2025-10-14-auth-system/     # Shallow clone for this session
-├── 2025-10-14-api-work/        # Shallow clone for this session
-└── ...
+# Note: Session clones live as .codebase/ within each session directory
+# Example: active/2025-10-14-auth-system/.codebase/ contains the shallow clone
 ```
 
 **Utilities** (`_bin/`, `_templates/`) sort first, keeping them separate from **state directories** (`abandoned/`, `active/`, `completed/`, `drafting/`, `planned/`).
@@ -163,20 +166,11 @@ _AGENTS/sessions/
 - `subsessions.md` - Scope additions (creates new sessions)
 
 **Unlock Process (Completion Only):**
-1. `complete-session` script unlocks SESSION.md for final updates
+1. `_AGENTS/sessions/_bin/complete-session` script unlocks SESSION.md for final updates
 2. Agent can add final notes if needed
 3. SESSION.md becomes read-only again in `completed/`
 
-**Override (Emergency Only):**
-```bash
-# Emergency fix only
-chmod 644 sessions/active/{session-slug}/SESSION.md
-# Make critical fix
-git add sessions/active/{session-slug}/SESSION.md
-git commit -m "[{session-slug}] OVERRIDE: Fix critical SESSION.md error"
-chmod 444 sessions/active/{session-slug}/SESSION.md
-# Document reason in worklog.md
-```
+**Emergency Override:** Only use in critical situations. Follow the procedure documented in [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#troubleshooting).
 
 **Why This Matters:**
 - Enables drift analysis between planned vs. actual work
@@ -190,32 +184,6 @@ chmod 444 sessions/active/{session-slug}/SESSION.md
 **FAQ: How do I track scope changes?**
 - **Answer:** Use `worklog.md` for progress updates, `active-plan.md` for task changes, and `subsessions.md` for scope additions that create new sessions. These files are writable during active work.
 
-### Session Activation & Claiming
-
-Agent identity is established per-session via environment variables. The `claim-session` script creates a `.session-env` file in the session directory.
-
-**Claim Process:**
-
-1. Pull latest: `git pull origin main`
-2. Check `.agents/sessions.lock` for availability
-3. Add claim: `echo "{session-slug}:$(date +%s)" >> .agents/sessions.lock`
-4. Commit and push: `git commit -m "[2025-10-14-feature-x] Claim session" && git push`
-5. If push fails (race condition), pick different session
-6. Move session to `active/{session-slug}/` and commit
-7. Create `.session-env` file in session directory and commit
-8. Create worktree with session branch: `git worktree add -b session/{slug} .worktrees/{slug}`
-9. Activate session in worktree: `source ../../sessions/active/{slug}/.session-env`
-
-**Activation:**
-
-```bash
-cd .worktrees/{session-slug}
-source ../../sessions/active/{session-slug}/.session-env
-```
-
-Session activation sets git identity and environment for that session only. The `.session-env` file contains all environment variables for this session's agent identity.
-
-See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#session-claim-and-activation) for complete implementation.
 
 ### Naming Conventions
 
@@ -312,34 +280,101 @@ Simplified structure for KB merge sessions:
 
 ## Git Workflow SOP
 
-### Branch Strategy
+### Session Lifecycle Overview
 
-- Each session gets session-namespaced branch
-- Frequent merges to main (per sub-session or daily)
-- Squash merge for clean history
-- Session branch deleted after completion
+The Git workflow follows three distinct phases: **Session Initialization**, **Ongoing Work**, and **Session Completion/Cancellation**. Each phase uses standard Git operations within the isolated session clone.
 
-### Commit Strategy
+### 1. Session Initialization & Claiming
 
-All commits prefixed with session ID and automatically attributed via session environment:
+**Automated via:** `_AGENTS/sessions/_bin/claim-session {session-slug}`
 
-```bash
-# Code changes (uses GIT_AUTHOR_NAME/EMAIL from .session-env)
-git add src/ && git commit -m "[2025-10-14-feature-x] feat: implement feature"
+**Manual procedure:**
+1. Update main repository from remote
+2. Check session availability in `_AGENTS/sessions/sessions.lock`
+3. Atomically claim session via git push to lock file
+4. Move session from `planned/` to `active/` with read-only SESSION.md protection
+5. Create session environment file (`.session-env`) with agent identity variables
+6. Create shallow clone in `active/{session-slug}/.codebase/` from main repository
+7. Create session-specific branch within clone and configure remote as upstream
+8. Provide activation instructions for working in the session
 
-# Session files
-git add sessions/ && git commit -m "[2025-10-14-feature-x] docs: update worklog"
+### 2. Ongoing Work
 
-# KB learnings
-git add _AGENTS/knowledge/sessions/ && git commit -m "[2025-10-14-feature-x] docs: capture learnings"
+**Working Environment:**
+- Primary workspace: `_AGENTS/sessions/active/{session-slug}/.codebase/` (shallow clone)
+- Session metadata: `_AGENTS/sessions/active/{session-slug}/` (environment, tracking files)
+- Remote configuration: `origin` renamed to `upstream` (points to main repo)
 
-# KB canonical (only in KB merge sessions)
-git add _AGENTS/knowledge/ && git commit -m "[2025-10-14-feature-x] docs: merge KB learnings"
-```
+**Branch Strategy:**
+- Session works on `session/{session-slug}` branch within session clone
+- Main repository remains on base branch (e.g., `main`)
+- Session branch is isolated from other sessions
+- Periodic pushes to main repository for backup
 
-**Note:** Git automatically uses `GIT_AUTHOR_NAME`, `GIT_COMMITTER_NAME`, etc. from environment when set.
+**Commit Strategy:**
+- All commits automatically attributed via session environment variables
+- Code changes committed with session-prefixed messages
+- Session metadata updated in main repository separately from code changes
+- Knowledge capture in session-scoped directories
+- Always use specific file paths rather than `git add .`
 
-**Avoid:** `git add .` - be specific about what you're committing.
+**File Management:**
+- Code changes: Made within `{session-slug}/.codebase/`, committed to session branch
+- Session metadata: Updated in `{session-slug}/` directory, committed to main branch
+- Knowledge artifacts: Created in `_AGENTS/knowledge/sessions/{session}/`
+
+### 3. Session Completion
+
+**Automated via:** `_AGENTS/sessions/_bin/complete-session {session-slug}`
+
+**Manual procedure:**
+1. Generate patch file from session work in `.codebase/`
+2. Check for KB learnings and create merge session if needed
+3. Remove session clone directory (`.codebase/`)
+4. Merge session branch to main via squash merge
+5. Remove session entry from `_AGENTS/sessions/sessions.lock`
+6. Move session from `active/` to `completed/`
+7. Delete session branch and clean up
+8. Provide instructions for environment deactivation
+
+**Post-Completion:**
+- Session remains read-only in `completed/` for audit purposes
+- Patch file available for review
+- KB merge sessions created automatically when learnings exist
+- Environment variables should be unset
+
+### 4. Session Cancellation
+
+**Automated via:** `_AGENTS/sessions/_bin/cancel-session {session-slug}` (to be implemented)
+
+**Manual procedure:**
+1. Document cancellation reasons in session `worklog.md`
+2. Remove session clone directory (`.codebase/`)
+3. Remove session entry from `_AGENTS/sessions/sessions.lock`
+4. Move session from `active/` to `abandoned/`
+5. Create abandonment commit with clear documentation
+6. Optionally create KB merge session for partial learnings
+7. Clean up session branch if created
+
+**Post-Cancellation:**
+- Session moved to `abandoned/` with documented reasons
+- Partial work available for future reference
+- Lock file updated to free session slot
+
+### Branch and Merge Strategy
+
+**Session Branches:**
+- Format: `session/{session-slug}`
+- Created during session initialization within session clone
+- Used exclusively within session's `.codebase/` directory
+- Merged to main via squash merge during completion
+- Deleted after successful completion or cancellation
+
+**Main Repository Integration:**
+- Main repository receives squash merges from completed sessions
+- Clean history maintained with single commit per session
+- Session contributions clearly attributed via commit messages
+- Conflict resolution documented in session worklog when needed
 
 ## Conflict Resolution
 
@@ -366,7 +401,7 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 ### Multi-Agent Specific
 5. **Always pull before claiming** - Get latest state first
 6. **Handle race conditions gracefully** - Pick different session if claim fails
-7. **Namespace everything** - Use `.worktrees/{session-slug}/` and `session/{session-id}`
+7. **Namespace everything** - Use `{session-slug}/.codebase/` and `session/{session-id}`
 8. **Session-prefixed commits** - Every commit tagged with `[{session-id}]`
 9. **KB learnings are session-scoped** - Never write directly to `knowledge/`
 10. **Create KB merge sessions** - Auto-generate at session completion
