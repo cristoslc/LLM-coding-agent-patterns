@@ -1,5 +1,0 @@
-# AGENT RULES
-
-## 1. REQUIRED: Agents MUST ALWAYS follow `_AGENTS/sessions` protocol
-
-Unless explicitly instructed otherwise, agents must always adhere to the `_AGENTS/sessions` protocol for managing conversations and interactions. This ensures consistency and reliability in agent behavior. Start with SESSIONS-README.md.
