@@ -1,28 +1,61 @@
-# Worktree Protocol Investigation: Centering on Passive Restraint Strategy
+# Worktree Protocol Investigation: Hub-Spoke Architecture Transition
 
-## Executive Summary: The Critical Role of Passive Restraints
+## Executive Summary: From Worktrees to Hub-Spoke Architecture
 
-This investigation into worktree protocol violations during previous agent sessions reveals a fundamental gap: the absence of **passive restraint mechanisms**. While existing protocol documentation is clear, the agent's consistent failure in execution and decision-making highlights a critical need for always-on, context-aware guidance.
+This investigation into worktree protocol violations during previous agent sessions revealed fundamental issues with the worktree approach itself. While passive restraint mechanisms are valuable, the core problem is that **Git worktrees are conceptually too complex for reliable agent execution**.
 
-**Passive restraints** (e.g., `.roo/rules`, `.cursorrules`) are configuration files that AI agents automatically consult before taking actions. They act as persistent, project-specific guardrails, embodying "poka-yoke" (error-proofing) principles by making correct behavior easier and incorrect behavior harder. Their absence meant agents relied solely on transient system prompts or reactive validation, leading to:
+**Critical Discovery**: A **hub-and-spoke architecture with shallow clones** is superior for agent sessions because:
 
--   Working outside the designated worktree.
--   Creating files in incorrect locations.
--   Operating on the wrong Git branch.
+- **Simpler Mental Model**: Standard Git workflow, no special concepts
+- **Complete Isolation**: Each session is truly independent
+- **Ephemeral by Nature**: Sessions are temporary, shallow clones are temporary
+- **Network Independence**: Sessions work offline, only main repo connects to cloud
+- **Robust and Reliable**: No fragile dependencies, works across filesystems
 
-This document recontextualizes the root causes of protocol violations, emphasizing that **implementing robust passive restraints is the foundational solution** to ensure consistent adherence to the Agent Sessions Protocol.
+This document presents the investigation findings and the architectural decision to **transition from worktrees to a hub-spoke methodology** with shallow clones as the foundation for the Agent Sessions Protocol.
 
-## Remediation Strategies: First-Line Defenses for Protocol Adherence
+## Investigation Findings: Root Causes and Solutions
 
-To address the identified protocol violations, we must implement robust, non-agent-behavior-dependent remediation strategies as first-line defenses. These mechanisms act as "passive restraints" or "poka-yoke" (error-proofing) to prevent errors before they occur or make them immediately obvious.
+### Root Cause Analysis
+The investigation identified multiple contributing factors to worktree protocol violations:
 
-### 1. Git Hooks (Pre-commit/Pre-push)
+1. **Conceptual Complexity**: Worktrees introduce cognitive overhead that agents struggle with
+2. **Shared State Confusion**: Worktrees share Git state, making boundaries unclear
+3. **Missing Passive Restraints**: Lack of automatic enforcement mechanisms
+4. **Decision-Making Failure**: Agents consistently failed to follow explicit worktree instructions
+5. **Workflow Friction**: Non-standard Git operations that require special knowledge
 
-Git hooks are scripts that Git executes before or after events like commit or push. They are ideal for enforcing repository-level policies without relying on agent discretion.
+### Architectural Decision: Hub-Spoke with Shallow Clones
+
+After comprehensive evaluation of alternatives (reference clones, shallow clones, full clones), the **hub-and-spoke architecture with shallow clones** emerges as the optimal solution:
+
+```
+Cloud (GitHub)
+    ↓
+Main Repo (on-disk, full history)
+    ↓
+Session Clones (shallow, ephemeral)
+```
+
+### Why Hub-Spoke Solves Core Problems
+
+1. **Eliminates Conceptual Complexity**: Standard Git repository workflow
+2. **Provides Complete Isolation**: Each session is independent
+3. **Aligns with Ephemeral Nature**: Sessions are temporary by definition
+4. **Simplifies Agent Understanding**: No special concepts to learn
+5. **Maximizes Reliability**: No fragile dependencies or shared state
+
+## Updated Remediation Strategies: Hub-Spoke Implementation
+
+The transition to hub-spoke architecture requires implementing new remediation strategies tailored for shallow clones:
+
+### 1. Git Hooks for Session Clones
+
+Git hooks are adapted for the hub-spoke architecture to enforce session isolation.
 
 *   **Pre-commit Hook**:
-    *   **Purpose**: Prevent commits to non-session branches or from outside the worktree.
-    *   **Implementation**: A script that checks `git rev-parse --abbrev-ref HEAD` against the expected session branch and `pwd` against the worktree path. If conditions are not met, the commit is aborted.
+    *   **Purpose**: Prevent commits to non-session branches or from outside the session directory.
+    *   **Implementation**: A script that checks `git rev-parse --abbrev-ref HEAD` against the expected session branch and `pwd` against the session directory.
     *   **Example**:
         ```bash
         #!/bin/bash
@@ -32,31 +65,35 @@ Git hooks are scripts that Git executes before or after events like commit or pu
             echo "ERROR: Cannot commit to non-session branch: $CURRENT_BRANCH"
             exit 1
         fi
-        # Further checks for worktree path can be added here
+        # Check we're in session directory
+        if [[ ! "$PWD" == *"/.sessions/"* ]]; then
+            echo "ERROR: Must commit from within session directory"
+            exit 1
+        fi
         ```
 
 *   **Pre-push Hook**:
-    *   **Purpose**: Ensure all changes are pushed to the correct session branch.
-    *   **Implementation**: A script that verifies the remote branch matches the local session branch.
+    *   **Purpose**: Ensure pushes go to the correct upstream (main repo) and branch.
+    *   **Implementation**: A script that verifies the remote configuration and session branch.
 
-### 2. Enhanced Shell Environment (Non-Agent Dependent)
+### 2. Enhanced Shell Environment for Session Clones
 
-The shell environment itself can provide continuous, passive feedback and enforce rules.
+The shell environment is adapted for session clones with clear visual feedback.
 
 *   **Prompt Modification**:
-    *   **Purpose**: Visually remind the agent of the current branch and worktree status.
-    *   **Implementation**: Modify the `PS1` (prompt string 1) environment variable to display the current Git branch and an indicator if the current directory is within a worktree. This information is always visible, reducing "PWD Anchoring Loss."
+    *   **Purpose**: Visually remind the agent of the current branch and session status.
+    *   **Implementation**: Modify the `PS1` (prompt string 1) environment variable to display the current Git branch and an indicator if the current directory is within a session clone.
     *   **Example**:
         ```bash
-        # In .session-env or similar sourced file
-        export PS1='[\u@\h \W $(git rev-parse --abbrev-ref HEAD 2>/dev/null)]$(pwd | grep -q ".worktrees" && echo " [WORKTREE]" || echo " [MAIN]")\$ '
+        # In .session-env for session clones
+        export PS1='[\u@\h \W $(git rev-parse --abbrev-ref HEAD 2>/dev/null)]$(pwd | grep -q ".sessions" && echo " [SESSION]" || echo " [MAIN]")\$ '
         ```
-    *   **Agent Awareness**: Agents must be explicitly instructed to parse and utilize this prompt information as a primary source of truth for their current operational context. They should be aware that if the `[WORKTREE]` indicator is missing or the branch name is incorrect, they need to source their session environment or change directories.
+    *   **Agent Awareness**: Agents parse the prompt to verify they're in the correct session directory and on the right branch.
 
 *   **Environment Variable Enforcement**:
-    *   **Purpose**: Define critical session parameters that agents must adhere to.
-    *   **Implementation**: Set `SESSION_SLUG`, `SESSION_BRANCH`, and `SESSION_DIR` variables upon sourcing the session environment. These variables can then be referenced by other scripts or agent logic.
-    *   **Agent Awareness**: Agents should be trained to always check for the presence and correctness of these environment variables before performing session-critical actions. If not set, the agent should be instructed to source the session environment.
+    *   **Purpose**: Define critical session parameters for shallow clones.
+    *   **Implementation**: Set `SESSION_SLUG`, `SESSION_BRANCH`, and `SESSION_DIR` variables upon sourcing the session environment. These variables reference the session clone directory rather than worktree.
+    *   **Agent Awareness**: Agents check these variables to ensure they're operating in the correct session context.
 
 ### 3. File System Guardrails
 

@@ -9,7 +9,7 @@ This document provides detailed implementation guidance, examples, and troublesh
 - [Utility Scripts](#utility-scripts)
 - [Session Templates](#session-templates)
 - [Detailed Implementation Examples](#detailed-implementation-examples)
-- [Git Worktrees Setup](#git-worktrees-setup)
+- [Hub-Spoke Architecture Setup](#hub-spoke-architecture-setup)
 - [Agent Registry & Session Lock](#agent-registry--session-lock)
 - [State Flowcharts](#state-flowcharts)
 - [Conflict Resolution Examples](#conflict-resolution-examples)

@@ -61,14 +61,14 @@ Coordination through **git** (no orchestrator):
 ./_bin/claim-session 2025-10-14-feature-x
 # Note: SESSION.md becomes read-only to preserve original plan
 
-# Activate session environment (in worktree)
-cd .worktrees/2025-10-14-feature-x
-source ../../sessions/active/2025-10-14-feature-x/.session-env
+# Activate session environment (in session clone)
+cd .sessions/2025-10-14-feature-x
+source .session-env
 
 # Work on session (use worklog.md, active-plan.md for updates)...
 
 # Complete session (unlocks SESSION.md for final updates)
-cd ../../..
+cd ../..
 ./_bin/complete-session 2025-10-14-feature-x
 ```
 

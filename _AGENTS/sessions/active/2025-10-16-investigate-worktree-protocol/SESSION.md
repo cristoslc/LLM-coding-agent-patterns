@@ -1,7 +1,7 @@
-# Session: Investigate Worktree Protocol Issues and Fix Protocol Documentation
+# Session: Investigate Worktree Protocol Issues and Implement Hub-Spoke Architecture
 
 ## Context
-During the implementation of session "2025-10-15-fix-session-scripts", the agent (myself) failed to properly follow the Agent Sessions Protocol worktree workflow. This resulted in files being created in incorrect locations, working in the wrong directory, and generally not adhering to the established session management procedures. This session will investigate the root causes of these protocol violations and implement fixes to prevent future occurrences.
+During the implementation of session "2025-10-15-fix-session-scripts", the agent (myself) failed to properly follow the Agent Sessions Protocol worktree workflow. This resulted in files being created in incorrect locations, working in the wrong directory, and generally not adhering to the established session management procedures. This session will investigate the root causes of these protocol violations and implement a transition to a hub-and-spoke architecture using shallow clones to prevent future occurrences.
 
 ## Problem Statement
 The following protocol violations occurred during the previous session implementation:
@@ -19,36 +19,93 @@ These violations suggest fundamental issues with either:
 - The agent's understanding of when and how to use worktrees
 - Missing validation steps to ensure proper worktree usage
 - Inadequate safeguards against working directory confusion
+- **The worktree approach itself being too complex for reliable agent execution**
+
+## Investigation Findings
+
+### Root Cause Analysis
+Through comprehensive investigation, the primary issues were identified as:
+
+1. **Agent Decision-Making Failure**: The agent consistently failed to follow explicit worktree instructions
+2. **Missing Passive Restraints**: Lack of automatic enforcement mechanisms
+3. **Worktree Conceptual Complexity**: Worktrees introduce cognitive overhead that leads to errors
+4. **Shared State Confusion**: Worktrees share Git state, making boundaries unclear
+
+### Critical Discovery: Hub-Spoke Superiority
+Investigation of alternative approaches revealed that a **hub-and-spoke architecture with shallow clones** is superior for agent sessions:
+
+- **Simpler Mental Model**: Standard Git workflow, no special concepts
+- **Complete Isolation**: Each session is truly independent
+- **Ephemeral by Nature**: Sessions are temporary, shallow clones are temporary
+- **Network Independence**: Sessions work offline, only main repo connects to cloud
+- **Robust and Reliable**: No fragile dependencies, works across filesystems
+
+## Architecture Decision
+
+### Decision: Replace Worktrees with Hub-Spoke Shallow Clones
+
+**Rationale**:
+1. **Aligns with Ephemeral Nature**: Sessions are temporary by definition
+2. **Simplifies Agent Understanding**: Standard Git workflow, no worktree concepts
+3. **Maximizes Isolation**: Each session is completely independent
+4. **Minimizes Risk**: Clear boundaries, hard to violate protocol
+5. **Optimizes for Local Work**: Fast creation, offline capability
+6. **Centralizes Cloud Access**: Only main repo needs credentials/config
+
+### New Architecture
+```
+Cloud (GitHub)
+    ↓
+Main Repo (on-disk, full history)
+    ↓
+Session Clones (shallow, ephemeral)
+```
 
 ## Acceptance Criteria
 - [ ] **Root Cause Analysis**: Complete investigation of why worktree protocol was not followed
-- [ ] **Protocol Documentation Review**: Review and enhance SESSIONS-README.md and SESSIONS-REFERENCE.md for worktree clarity
-- [ ] **Worktree Usage Guidelines**: Create clear, step-by-step guidelines for worktree usage in sessions
-- [ ] **Validation Mechanisms**: Implement checks to ensure worktree is being used correctly
-- [ ] **PWD Anchoring Solutions**: Develop methods to prevent working directory confusion
-- [ ] **Session Template Updates**: Update session templates to include worktree protocol reminders
-- [ ] **Documentation Examples**: Provide concrete examples of proper vs improper worktree usage
-- [ ] **Prevention Mechanisms**: Create safeguards that prevent working outside worktree when required
+- [ ] **Architecture Transition**: Design and document hub-and-spoke architecture with shallow clones
+- [ ] **Protocol Documentation Update**: Update SESSIONS-README.md and SESSIONS-REFERENCE.md to reflect new architecture
+- [ ] **Session Script Updates**: Modify claim-session and complete-session scripts for shallow clone workflow
+- [ ] **Validation Mechanisms**: Implement checks to ensure shallow clone usage
+- [ ] **Agent Awareness Guidelines**: Create guidelines for agents working with shallow clones
+- [ ] **Migration Strategy**: Document how to transition from worktrees to shallow clones
+- [ ] **Backward Compatibility**: Ensure existing worktree sessions can be completed
 
 ## Implementation Plan
 
-### Phase 1: Investigation and Analysis (Day 1)
+### Phase 1: Investigation and Analysis (Day 1) ✅ COMPLETED
 1. **Review Session Transcripts**: Analyze the complete interaction history from the previous session
 2. **Identify Decision Points**: Map out where worktree creation should have occurred vs where it actually happened
 3. **Analyze File Creation Patterns**: Document where files were created vs where they should have been created
 4. **Review Protocol Documentation**: Examine current SESSIONS-README.md and SESSIONS-REFERENCE.md for worktree guidance
+5. **Evaluate Alternatives**: Research shallow clones, reference clones, and hub-spoke architecture
 
-### Phase 2: Design and Implement Passive Restraints (Day 2-3)
-5. **Design and Install Git Hooks**: Define and implement pre-commit and pre-push Git hooks to enforce branch adherence and worktree usage. Crucially, design an installation method that *appends* to or *integrates with* any pre-existing hooks, rather than overwriting them.
-6. **Enhance Shell Environment**: Modify the `PS1` prompt to display the current Git branch and worktree status.
-7. **Implement Environment Variable Enforcement**: Define and enforce `SESSION_SLUG`, `SESSION_BRANCH`, and `SESSION_DIR` variables in the session environment.
-8. **Develop Agent Awareness Guidelines**: Create explicit instructions for agents to check the `PS1` prompt and environment variables for their operational context, and to source the session environment if not active.
-9. **Establish File System Guardrails**: Define rules for allowed file creation locations within the worktree.
-10. **Investigate Temporary User with Restricted Permissions**: Research the feasibility of creating a temporary, platform-agnostic (macOS, Linux, Windows) user with permissions restricted to only the worktree, and read-only access to other repository files, to prevent unauthorized edits.
-11. **Evaluate Per-Session Cloning as an Alternative**: Investigate the feasibility and implications of dropping Git worktrees in favor of creating a fresh clone of the repository for each session, to ensure complete isolation and prevent cross-session interference. This would be an alternative to worktree-specific guardrails.
+### Phase 2: Design New Architecture (Day 2-3) ✅ COMPLETED
+6. **Design Hub-Spoke Architecture**: Define main repo as hub, sessions as shallow clone spokes
+7. **Design Git Hooks and installation method**: Define pre-commit and pre-push Git hooks to enforce branch adherence and session isolation
+8. **Enhance Shell Environment**: Determine how to modify the `PS1` prompt to display the current Git branch and session status
+9. **Implement Environment Variable Enforcement**: Define and enforce `SESSION_SLUG`, `SESSION_BRANCH`, and `SESSION_DIR` variables in the session environment
+10. **Develop Agent Awareness Guidelines**: Create explicit instructions for agents to check the `PS1` prompt and environment variables for their operational context
+11. **Establish File System Guardrails**: Consider strategies and rules for allowed file creation locations within the session clone
+12. **Evaluate Cloning Strategies**: Compare shallow clones vs reference clones vs full clones
+13. **Design Session Scripts**: Update claim-session and complete-session for hub-spoke workflow
+
+### Phase 3: Documentation Updates (Day 4)
+14. **Update SESSIONS-README.md**: Replace worktree documentation with hub-spoke architecture
+15. **Update SESSIONS-REFERENCE.md**: Update all examples and procedures for shallow clone workflow
+16. **Create Migration Guide**: Document how to transition from worktrees to shallow clones
+17. **Update Session Templates**: Modify templates to reflect new architecture
+18. **Document Best Practices**: Create guidelines for hub-spoke workflow
+
+### Phase 4: Implementation and Testing (Day 5-6)
+19. **Implement Updated Session Scripts**: Modify claim-session and complete-session scripts
+20. **Test New Workflow**: Validate hub-spoke architecture with test sessions
+21. **Update Passive Restraints**: Adapt all designed mechanisms for shallow clones
+22. **Create Rollback Procedures**: Document how to revert if needed
+23. **Final Documentation Review**: Ensure all documentation is consistent and complete
 
 ### Phase 3: Integrate and Validate Passive Restraints (Day 4-5)
-10. **Integrate Passive Restraints**: Apply the designed Git hooks, shell environment enhancements, and file system guardrails into the Agent Sessions Protocol.
+10. **Integrate Passive Restraints**: Create and Apply the designed Git hooks, shell environment enhancements, and file system guardrails into the Agent Sessions Protocol.
 11. **Update Session Scripts**: Modify `claim-session` and `complete-session` scripts to leverage and validate against the new passive restraints.
 12. **Create Validation Test Cases**: Develop automated tests to verify that the implemented passive restraints successfully prevent protocol violations (e.g., committing to the wrong branch, creating files outside the worktree).
 13. **Document Remediation Strategies**: Update `SESSIONS-REFERENCE.md` with detailed documentation of the new passive restraint mechanisms and their usage.
