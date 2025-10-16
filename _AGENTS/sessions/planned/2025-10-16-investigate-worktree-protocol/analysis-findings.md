@@ -48,56 +48,62 @@ source ../../sessions/active/2025-10-14-auth-system/.session-env
 ## Root Cause Analysis: Why Protocol Was Violated
 
 ### Primary Issue: **Agent Decision-Making Failure**
-The protocol documentation is **crystal clear** - the failure was in **execution/decision-making**, not documentation clarity.
+The protocol documentation is **crystal clear** - the failure was in **execution/decision-making**, not documentation clarity. The agent consistently failed to follow explicit instructions regarding worktree usage.
 
 ### Specific Decision Points Where Protocol Failed:
 
-1. **Session Start Decision Point**:
-   - **Should have**: Created worktree immediately when session started
-   - **Actually did**: Worked in main directory, never created worktree initially
+1.  **Session Start Decision Point**:
+    -   **Should have**: Created worktree immediately when session started.
+    -   **Actually did**: Worked in main directory, never created worktree initially.
 
-2. **File Creation Decision Points**:
-   - **Should have**: Created all session files within worktree directory
-   - **Actually did**: Created files scattered across repository root
+2.  **File Creation Decision Points**:
+    -   **Should have**: Created all session files within worktree directory.
+    -   **Actually did**: Created files scattered across repository root.
 
-3. **Working Directory Decision Points**:
-   - **Should have**: Changed to worktree directory before any work
-   - **Actually did**: Stayed in main repository directory
+3.  **Working Directory Decision Points**:
+    -   **Should have**: Changed to worktree directory before any work.
+    -   **Actually did**: Stayed in main repository directory.
 
-4. **Session Environment Activation**:
-   - **Should have**: Activated session environment from within worktree
-   - **Actually did**: Attempted to source environment from wrong location
+4.  **Session Environment Activation**:
+    -   **Should have**: Activated session environment from within worktree.
+    -   **Actually did**: Attempted to source environment from wrong location.
 
 ## Contributing Factors
 
 ### 1. **PWD Anchoring Loss**
-- Agent lost track of current working directory
-- No validation of current directory before operations
-- No checks to ensure working in correct location
+-   Agent lost track of current working directory.
+-   No validation of current directory before operations.
+-   No checks to ensure working in correct location.
 
 ### 2. **Missing Validation Steps**
-- No verification that worktree exists before proceeding
-- No checks that files are being created in correct locations
-- No confirmation of proper working directory
+-   No verification that worktree exists before proceeding.
+-   No checks that files are being created in correct locations.
+-   No confirmation of proper working directory.
 
 ### 3. **Protocol Adherence Assumption**
-- Agent assumed it was following protocol without verification
-### 4. **Missing: Session Environment Activation Examples**
-The manual process documentation shows worktree creation and directory switching, but could be clearer about **when and how** to source the session environment.
-
-**Current**: Shows `source ../../sessions/active/2025-10-14-feature-x/.session-env` but doesn't emphasize this is **critical** for proper session operation.
-
-**Needed**: More explicit emphasis that session environment **must** be sourced for proper agent identity and git attribution.
-
-- No self-checking mechanisms in place
-- Lack of protocol compliance validation
+-   Agent assumed it was following protocol without verification.
+-   No self-checking mechanisms in place.
+-   Lack of protocol compliance validation.
 
 ### 4. **Complexity of Multi-Directory Operations**
-- Session requires coordination between multiple directories:
-  - Main repo (for session metadata)
-  - Worktree (for actual work)
-  - Sessions directory (for session files)
-- Agent got confused about which operations happen where
+-   Session requires coordination between multiple directories:
+    -   Main repo (for session metadata)
+    -   Worktree (for actual work)
+    -   Sessions directory (for session files)
+-   Agent got confused about which operations happen where.
+
+### 5. **Agent Operating Outside Session Branch (New Guardrail Issue)**
+-   During testing, the agent inadvertently made changes to the `main` branch, violating the "ONLY WORK IN THE SESSION BRANCH" constraint. This indicates a critical need for a mechanism to ensure the agent is always operating within the correct session branch while an active session is in progress.
+
+### 6. **Missing Passive Restraint Mechanisms (Critical Discovery)**
+-   The repository lacks passive constraint files (e.g., `.roo/rules`, `.cursorrules`) that would provide continuous guidance to AI agents.
+-   **Passive restraints** are rule files that agents automatically consult before taking actions, similar to how `.editorconfig` enforces coding standards passively.
+-   Without these passive restraints, agents rely solely on:
+    -   System prompts (which can be forgotten or overridden)
+    -   Active validation (which must be explicitly invoked)
+    -   User intervention (reactive rather than preventive)
+-   This absence likely contributed to protocol violations, as there was no persistent, always-available reference for correct behavior.
+-   Passive restraints align with **poka-yoke principles**: they make correct behavior easier and incorrect behavior harder by providing constant guidance.
 
 ## Documentation Gaps Identified
 
@@ -116,48 +122,37 @@ No guidance on ensuring files are created in correct locations.
 ### 3. **Missing: Protocol Compliance Checks**
 No self-validation mechanisms mentioned.
 
-**Needed**: Regular protocol compliance validation steps
+**Needed**: Regular protocol compliance validation steps.
 
 ### 4. **Missing: Error Recovery Procedures**
 No guidance on what to do if you realize you're not following protocol.
 
 **Needed**: "If you realize you're working outside worktree: [recovery steps]"
 
-## Recommendations for Protocol Enhancement
+### 5. **Missing: Active Session Branch Validation**
+No explicit check to ensure the agent is operating within the correct session branch. While "Namespace Isolation" is mentioned, the documentation lacks explicit instructions or mechanisms to *enforce* that an agent remains on its session branch.
 
-### 1. **Add Validation Functions to Session Scripts**
-```bash
-validate_in_worktree() {
-    if [[ ! "$PWD" =~ \.worktrees/ ]]; then
-        echo "ERROR: Not in worktree directory. Current: $PWD"
-        echo "Expected: .worktrees/$SESSION_SLUG/"
-        exit 1
-    fi
-}
-```
+**Needed**: "Verify current branch: `git rev-parse --abbrev-ref HEAD | grep -q 'session/$SESSION_SLUG' || echo 'ERROR: Not in session branch'"`
 
-### 2. **Enhance Documentation with Validation Steps**
-- Add "Protocol Compliance Check" sections
-- Include validation commands in examples
-- Add troubleshooting for protocol violations
+## Strategies for Helping the Agent Adhere to the Session Branch
 
-### 3. **Create Worktree Usage Guidelines**
-- Step-by-step worktree verification procedures
-- File location validation checks
-- Working directory confirmation protocols
+To address the newly identified guardrail issue and reinforce adherence to the session branch, the following strategies should be considered:
 
-### 4. **Implement Safeguards in Session Templates**
-- Include worktree protocol reminders in session templates
-- Add validation checkpoints to session workflows
-- Create protocol compliance reporting mechanisms
+1.  **Pre-command Hooks/Aliases**: Implement shell functions or aliases that wrap common git commands (`git commit`, `git add`, `git push`) and automatically perform a `validate_in_session_branch` check before execution. If the check fails, the command should be aborted with a clear error message.
+2.  **Environment Variable Enforcement**: Leverage session-specific environment variables (e.g., `SESSION_BRANCH`) to dynamically configure git to only operate on the designated branch, or to warn/error if an attempt is made to switch branches.
+3.  **Enhanced Shell Prompt**: Modify the shell prompt (`PS1`) to prominently display the current branch and a clear indicator if it does not match the active session branch.
+4.  **Automated Context Switching**: Explore mechanisms that automatically switch the agent's working directory and git context to the correct worktree/branch upon session activation, and revert upon deactivation.
+5.  **Pre-commit/Pre-push Hooks**: Implement client-side git hooks that prevent commits or pushes from occurring if the agent is not on the correct session branch.
+6.  **Clearer Documentation and Training**: While the protocol is clear, emphasize the "ONLY WORK IN THE SESSION BRANCH" rule with dedicated sections, examples, and warnings in `SESSIONS-README.md` and `SESSIONS-REFERENCE.md`.
 
 ## Conclusion
 
-**The protocol documentation is actually excellent and comprehensive.** The failure was in **execution and decision-making**, not in documentation clarity. The solution is to:
+**The protocol documentation is actually excellent and comprehensive.** The failure was in **execution and decision-making**, not documentation clarity. The solution is to:
 
-1. **Add validation mechanisms** to prevent protocol violations
-2. **Enhance documentation** with explicit validation steps
-3. **Create safeguards** that make protocol violations impossible or easily detectable
-4. **Implement recovery procedures** for when violations are detected
+1.  **Add validation mechanisms** to prevent protocol violations.
+2.  **Enhance documentation** with explicit validation steps.
+3.  **Create safeguards** that make protocol violations impossible or easily detectable.
+4.  **Implement recovery procedures** for when violations are detected.
+5.  **Specifically enforce adherence to the session branch** through technical and procedural safeguards.
 
-The core protocol is sound - we just need better **enforcement and validation** mechanisms.
+The core protocol is sound - we just need better **enforcement and validation** mechanisms, with a particular focus on ensuring the agent operates exclusively within its assigned session branch.

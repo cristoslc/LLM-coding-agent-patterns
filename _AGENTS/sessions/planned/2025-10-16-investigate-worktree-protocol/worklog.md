@@ -66,3 +66,36 @@ Session documentation is now complete with:
 - Clear implementation plan for protocol enhancements
 
 Next: Move session to planned status for implementation.
+
+## [2025-10-16 01:07] Phase 1: Investigation and Analysis Complete
+
+Completed Phase 1 of the investigation. Key findings and actions:
+- **Reviewed Session Transcripts**: Re-established context from `SESSION.md`.
+- **Identified Decision Points**: Mapped out where worktree creation and usage protocols were violated.
+- **Analyzed File Creation Patterns**: Documented instances of files being created in incorrect locations.
+- **Reviewed Protocol Documentation**: Examined `SESSIONS-README.md` and `SESSIONS-REFERENCE.md`, confirming clarity on worktree usage but identifying a gap in explicit enforcement of working within the session branch.
+- **Considered Strategies for Session Branch Adherence**: Developed a list of strategies to help the agent adhere to the session branch, including pre-command hooks, environment variable enforcement, enhanced shell prompts, automated context switching, and clearer documentation.
+
+The investigation confirms that the core protocol documentation is sound, but the failure was in execution and decision-making, exacerbated by a lack of explicit enforcement mechanisms, particularly for staying within the session branch.
+
+## [2025-10-16 01:30] Research Phase Complete: SOP Best Practices and Passive Restraints
+
+Completed comprehensive research into SOP best practices, error-proofing mechanisms, and workflow validation. Key findings documented in `sop-research-findings.md`:
+
+**Research Areas Covered**:
+1. **SOP Best Practices**: Industry standards for creating effective Standard Operating Procedures
+2. **Poka-Yoke (Error-Proofing)**: Prevention and detection mechanisms from lean manufacturing
+3. **Workflow State Machines**: Validation checkpoints and state transition enforcement
+4. **Automated Guardrails**: Pre/post execution validation and enforcement mechanisms
+
+**Critical Discovery**: Repository lacks **passive restraint mechanisms** (e.g., `.roo/rules`, `.cursorrules`) that would provide continuous guidance to AI agents. This absence is a significant contributing factor to protocol violations.
+
+**Key Recommendations**:
+1. **Immediate**: Create passive restraint file (`.roo/rules`) with session protocol requirements
+2. **Short-term**: Develop four targeted procedural SOPs for session lifecycle phases
+3. **Medium-term**: Implement poka-yoke error-proofing mechanisms in session scripts
+4. **Long-term**: Deploy workflow state machine validation and automated guardrails
+
+**Updated `analysis-findings.md`**: Added section on missing passive restraints as a new contributing factor.
+
+**Next Steps**: Review findings with user and determine implementation priorities for Phase 2 (Documentation Enhancement).
