@@ -77,13 +77,15 @@ cd ../..
 For advanced users who need to understand the underlying process, see the detailed procedures in [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#detailed-implementation-examples).
 
 The manual process involves:
-1. **Session claiming** via `sessions/_bin/claim-session`
-2. **Session clone creation** in `.sessions/` directory
-3. **Environment activation** for agent identity
-4. **Work completion** with documentation updates
-5. **Session cleanup** via `sessions/_bin/complete-session`
+1. **Session claiming** - Update main repository, atomically claim session via git push, move to active, create environment file
+2. **Session clone creation** - Create shallow clone in `.sessions/` directory, create session branch, configure remote
+3. **Environment activation** - Source session environment to establish agent identity
+4. **Work completion** - Make changes, update documentation, capture learnings
+5. **Session cleanup** - Generate patch, merge to main, archive session, remove clone
 
-All manual procedures are implemented in the utility scripts mentioned above.
+**Automation:** The complete manual procedure is implemented in:
+- `sessions/_bin/claim-session` - Automates steps 1-3
+- `sessions/_bin/complete-session` - Automates step 5
 
 ## Implementation SOP
 
