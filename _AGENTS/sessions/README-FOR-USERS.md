@@ -1,6 +1,6 @@
 # Agent Sessions Protocol
 
-> **📖 For detailed examples, git commands, and troubleshooting:** See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md)
+> **📖 For detailed examples, git commands, and troubleshooting:** See [SESSIONS-REFERENCE.md](../knowledge/llm-coding-agent-patterns/SESSIONS-REFERENCE.md)
 
 ## Purpose
 
@@ -74,7 +74,7 @@ cd ../../../../..
 
 ### Manual Session Management
 
-For advanced users who need to understand the underlying process, see the detailed procedures in [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#detailed-implementation-examples).
+For advanced users who need to understand the underlying process, see the detailed procedures in [SESSIONS-REFERENCE.md](../knowledge/llm-coding-agent-patterns/SESSIONS-REFERENCE.md#detailed-implementation-examples).
 
 The manual process involves:
 1. **Session claiming** - Update main repository, atomically claim session via git push, move to active, create environment file
@@ -191,7 +191,7 @@ This approach keeps session-specific artifacts out of git while maintaining clea
 2. Agent can add final notes if needed
 3. SESSION.md becomes read-only again in `completed/`
 
-**Emergency Override:** Only use in critical situations. Follow the procedure documented in [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#troubleshooting).
+**Emergency Override:** Only use in critical situations. Follow the procedure documented in [SESSIONS-REFERENCE.md](../knowledge/llm-coding-agent-patterns/SESSIONS-REFERENCE.md#troubleshooting).
 
 **Why This Matters:**
 - Enables drift analysis between planned vs. actual work
@@ -272,7 +272,7 @@ Simplified structure for KB merge sessions:
 - **`SESSION.md`** - Auto-generated with source session reference
 - **`worklog.md`** - KB merge decisions and conflicts
 
-> **📊 For detailed state flowcharts:** See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#detailed-state-flowcharts)
+> **📊 For detailed state flowcharts:** See [SESSIONS-REFERENCE.md](../knowledge/llm-coding-agent-patterns/SESSIONS-REFERENCE.md#detailed-state-flowcharts)
 
 ## Knowledge Base SOP
 
@@ -409,7 +409,7 @@ The Git workflow follows three distinct phases: **Session Initialization**, **On
 | **Code Files** | Git merge | Standard resolution, document in worklog |
 | **Session Claims** | Optimistic locking | Retry with different session |
 
-See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) for detailed examples.
+See [SESSIONS-REFERENCE.md](../knowledge/llm-coding-agent-patterns/SESSIONS-REFERENCE.md#conflict-resolution-examples) for detailed examples.
 
 ## Best Practices
 
@@ -431,4 +431,4 @@ See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md#conflict-resolution-examples) 
 
 ---
 
-**📚 For more details:** See [SESSIONS-REFERENCE.md](SESSIONS-REFERENCE.md) for complete examples, git commands, and troubleshooting.
+**📚 For more details:** See [SESSIONS-REFERENCE.md](../knowledge/llm-coding-agent-patterns/SESSIONS-REFERENCE.md) for complete examples, git commands, and troubleshooting.

@@ -2,7 +2,7 @@
 
 This document provides detailed implementation guidance, examples, and troubleshooting for the multi-agent session protocol.
 
-> **📖 For essential protocol overview:** See [SESSIONS-README.md](SESSIONS-README.md)
+> **📖 For essential protocol overview:** See [SESSIONS-README.md](../../sessions/README-FOR-USERS.md)
 
 ## Table of Contents
 
@@ -921,4 +921,4 @@ git log --grep="2025-10-14-auth-system" --numstat --format="" | awk '{added+=$1;
 
 ---
 
-**📚 For essential protocol overview, return to [SESSIONS-README.md](SESSIONS-README.md)**
+**📚 For essential protocol overview, return to [SESSIONS-README.md](../../sessions/README-FOR-USERS.md)**
