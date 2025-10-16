@@ -104,23 +104,24 @@ EOF
 git add sessions/active/2025-10-14-feature-x/.session-env
 git commit -m "[2025-10-14-feature-x] Add session environment"
 
-# 4. Create worktree with session branch (outside sessions/)
-git worktree add -b session/2025-10-14-feature-x \
-  .worktrees/2025-10-14-feature-x \
-  HEAD
+# 4. Create session clone with session branch (outside sessions/)
+git clone --depth 1 --single-branch --branch main \
+  . .sessions/2025-10-14-feature-x
+cd .sessions/2025-10-14-feature-x
+git checkout -b session/2025-10-14-feature-x
+git remote rename origin upstream
 
 # 5. Activate session and start work
-cd .worktrees/2025-10-14-feature-x
 source ../../sessions/active/2025-10-14-feature-x/.session-env
 
-# Now working in isolated worktree!
+# Now working in isolated session clone!
 ```
 
 #### Completing a Session
 
 ```bash
 # 1. Finalize documentation (worklog, active-plan, generate patch)
-cd .worktrees/2025-10-14-feature-x
+cd .sessions/2025-10-14-feature-x
 git format-patch main --stdout > ../../sessions/active/2025-10-14-feature-x/2025-10-14-feature-x.patch
 
 # 2. Check for KB learnings and create KB merge session if exists
@@ -129,9 +130,9 @@ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-feature-x/learnings.md" ]; then
   # [Use KB merge session template]
 fi
 
-# 3. Return to main repo and remove worktree
+# 3. Return to main repo and remove session clone
 cd ../..  # Back to repo root
-git worktree remove .worktrees/2025-10-14-feature-x
+rm -rf .sessions/2025-10-14-feature-x
 
 # 4. Merge to main
 git pull origin main
