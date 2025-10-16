@@ -98,4 +98,6 @@ Completed comprehensive research into SOP best practices, error-proofing mechani
 
 **Updated `analysis-findings.md`**: Added section on missing passive restraints as a new contributing factor.
 
+**Updated `analysis-findings.md`**: Recontextualized and rewrote the document to center on the passive restraint strategy, integrating previous findings and recommendations into this new framework.
+
 **Next Steps**: Review findings with user and determine implementation priorities for Phase 2 (Documentation Enhancement).

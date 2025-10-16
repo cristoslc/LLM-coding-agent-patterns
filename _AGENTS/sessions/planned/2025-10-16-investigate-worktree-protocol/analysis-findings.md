@@ -1,10 +1,20 @@
-# Worktree Protocol Investigation: Findings and Analysis
+# Worktree Protocol Investigation: Centering on Passive Restraint Strategy
+
+## Executive Summary: The Critical Role of Passive Restraints
+
+This investigation into worktree protocol violations during previous agent sessions reveals a fundamental gap: the absence of **passive restraint mechanisms**. While existing protocol documentation is clear, the agent's consistent failure in execution and decision-making highlights a critical need for always-on, context-aware guidance.
+
+**Passive restraints** (e.g., `.roo/rules`, `.cursorrules`) are configuration files that AI agents automatically consult before taking actions. They act as persistent, project-specific guardrails, embodying "poka-yoke" (error-proofing) principles by making correct behavior easier and incorrect behavior harder. Their absence meant agents relied solely on transient system prompts or reactive validation, leading to:
+
+-   Working outside the designated worktree.
+-   Creating files in incorrect locations.
+-   Operating on the wrong Git branch.
+
+This document recontextualizes the root causes of protocol violations, emphasizing that **implementing robust passive restraints is the foundational solution** to ensure consistent adherence to the Agent Sessions Protocol.
 
 ## Current Protocol Documentation Analysis
 
-### What the Documentation Actually Says
-
-After reviewing both SESSIONS-README.md and SESSIONS-REFERENCE.md, the worktree protocol is actually **very clearly documented**:
+The existing documentation (`SESSIONS-README.md` and `SESSIONS-REFERENCE.md`) provides clear instructions for worktree usage:
 
 #### From SESSIONS-README.md (Lines 107-117):
 ```bash
@@ -37,122 +47,106 @@ source ../../sessions/active/2025-10-14-auth-system/.session-env
 
 ### Key Protocol Points That Were Violated
 
-1. **Worktree Creation Timing**: Protocol clearly states worktree should be created **immediately after claiming** (Line 108 in README, Line 45 in REFERENCE)
+Despite clear documentation, the following protocol points were consistently violated:
 
-2. **Working Directory Requirement**: Protocol explicitly states to **"cd .worktrees/{session-slug}"** before activating session environment
+1.  **Worktree Creation Timing**: Worktree was not created immediately after claiming the session.
+2.  **Working Directory Requirement**: Agent failed to `cd .worktrees/{session-slug}` before starting work.
+3.  **Isolation Principle**: Agent did not maintain an isolated working directory, leading to scattered files.
+4.  **Concurrent Session Support**: The agent's actions undermined the ability for multiple concurrent sessions.
 
-3. **Isolation Principle**: Documentation emphasizes worktrees provide "isolated working directories" and "namespace isolation"
+## Root Cause Analysis: The Absence of Passive Restraints
 
-4. **Concurrent Session Support**: Protocol designed for "multiple sessions work concurrently" using worktrees
+The primary issue was **Agent Decision-Making Failure**, but this failure was critically exacerbated by the **absence of passive restraint mechanisms**. The protocol documentation is clear, but without persistent, automatic guardrails, the agent consistently failed to follow explicit instructions.
 
-## Root Cause Analysis: Why Protocol Was Violated
-
-### Primary Issue: **Agent Decision-Making Failure**
-The protocol documentation is **crystal clear** - the failure was in **execution/decision-making**, not documentation clarity. The agent consistently failed to follow explicit instructions regarding worktree usage.
-
-### Specific Decision Points Where Protocol Failed:
+### Specific Decision Points Where Protocol Failed (Exacerbated by Missing Passive Restraints):
 
 1.  **Session Start Decision Point**:
-    -   **Should have**: Created worktree immediately when session started.
-    -   **Actually did**: Worked in main directory, never created worktree initially.
+    -   **Should have**: Created worktree immediately.
+    -   **Actual**: Worked in main directory, never created worktree initially.
+    -   **Passive Restraint Impact**: A `.roo/rules` file could have enforced worktree creation as a prerequisite for any session-related action.
 
 2.  **File Creation Decision Points**:
-    -   **Should have**: Created all session files within worktree directory.
-    -   **Actually did**: Created files scattered across repository root.
+    -   **Should have**: Created all session files within the worktree directory.
+    -   **Actual**: Created files scattered across the repository root.
+    -   **Passive Restraint Impact**: Rules could have prevented file creation outside the designated worktree path.
 
 3.  **Working Directory Decision Points**:
     -   **Should have**: Changed to worktree directory before any work.
-    -   **Actually did**: Stayed in main repository directory.
+    -   **Actual**: Stayed in the main repository directory.
+    -   **Passive Restraint Impact**: Rules could have validated the current working directory before allowing operations.
 
 4.  **Session Environment Activation**:
-    -   **Should have**: Activated session environment from within worktree.
-    -   **Actually did**: Attempted to source environment from wrong location.
+    -   **Should have**: Activated session environment from within the worktree.
+    -   **Actual**: Attempted to source environment from the wrong location.
+    -   **Passive Restraint Impact**: Rules could have enforced environment sourcing as a prerequisite for session activity.
 
-## Contributing Factors
+### Contributing Factors (Addressed by Passive Restraints)
 
-### 1. **PWD Anchoring Loss**
--   Agent lost track of current working directory.
--   No validation of current directory before operations.
--   No checks to ensure working in correct location.
+1.  **PWD Anchoring Loss**:
+    -   Agent lost track of the current working directory.
+    -   **Passive Restraint Solution**: Rules can enforce `pwd` validation before operations.
 
-### 2. **Missing Validation Steps**
--   No verification that worktree exists before proceeding.
--   No checks that files are being created in correct locations.
--   No confirmation of proper working directory.
+2.  **Missing Validation Steps**:
+    -   No verification that worktree exists or files are created in correct locations.
+    -   **Passive Restraint Solution**: Rules can define mandatory validation checks for worktree presence, file paths, and branch adherence.
 
-### 3. **Protocol Adherence Assumption**
--   Agent assumed it was following protocol without verification.
--   No self-checking mechanisms in place.
--   Lack of protocol compliance validation.
+3.  **Protocol Adherence Assumption**:
+    -   Agent assumed compliance without verification.
+    -   **Passive Restraint Solution**: Rules provide continuous, automatic self-checking mechanisms.
 
-### 4. **Complexity of Multi-Directory Operations**
--   Session requires coordination between multiple directories:
-    -   Main repo (for session metadata)
-    -   Worktree (for actual work)
-    -   Sessions directory (for session files)
--   Agent got confused about which operations happen where.
+4.  **Complexity of Multi-Directory Operations**:
+    -   Agent got confused about which operations happen where.
+    -   **Passive Restraint Solution**: Rules simplify decision-making by providing clear, always-available context-specific instructions.
 
-### 5. **Agent Operating Outside Session Branch (New Guardrail Issue)**
--   During testing, the agent inadvertently made changes to the `main` branch, violating the "ONLY WORK IN THE SESSION BRANCH" constraint. This indicates a critical need for a mechanism to ensure the agent is always operating within the correct session branch while an active session is in progress.
+5.  **Agent Operating Outside Session Branch (New Guardrail Issue)**:
+    -   Agent inadvertently made changes to the `main` branch.
+    -   **Passive Restraint Solution**: Rules can explicitly prohibit operations on non-session branches, acting as a strong preventive measure.
 
-### 6. **Missing Passive Restraint Mechanisms (Critical Discovery)**
--   The repository lacks passive constraint files (e.g., `.roo/rules`, `.cursorrules`) that would provide continuous guidance to AI agents.
--   **Passive restraints** are rule files that agents automatically consult before taking actions, similar to how `.editorconfig` enforces coding standards passively.
--   Without these passive restraints, agents rely solely on:
-    -   System prompts (which can be forgotten or overridden)
-    -   Active validation (which must be explicitly invoked)
-    -   User intervention (reactive rather than preventive)
--   This absence likely contributed to protocol violations, as there was no persistent, always-available reference for correct behavior.
--   Passive restraints align with **poka-yoke principles**: they make correct behavior easier and incorrect behavior harder by providing constant guidance.
+## Documentation Gaps Identified (Addressed by Passive Restraints)
 
-## Documentation Gaps Identified
+The identified documentation "gaps" are not necessarily a lack of *information*, but a lack of *enforcement*. Passive restraints directly address these by embedding the "needed" validations and checks into the agent's operational environment.
 
-While the protocol is documented, these **enhancements** could prevent future violations:
+1.  **Missing: Explicit Worktree Validation**:
+    -   **Needed**: "Verify you're in worktree: `pwd | grep -q '.worktrees/' || echo 'ERROR: Not in worktree directory'"`
+    -   **Passive Restraint Integration**: This check can be a rule that automatically runs before file operations.
 
-### 1. **Missing: Explicit Worktree Validation**
-Current docs show **how** to use worktrees but lack **validation** that worktree is being used correctly.
+2.  **Missing: File Location Validation**:
+    -   **Needed**: "Check file location: `pwd | grep -q '.worktrees/' || echo 'ERROR: Creating file outside worktree'"`
+    -   **Passive Restraint Integration**: A rule can prevent file creation outside the worktree.
 
-**Needed**: "Verify you're in worktree: `pwd | grep -q '.worktrees/' || echo 'ERROR: Not in worktree directory'"`
+3.  **Missing: Protocol Compliance Checks**:
+    -   **Needed**: Regular protocol compliance validation steps.
+    -   **Passive Restraint Integration**: Rules define these as automatic, continuous checks.
 
-### 2. **Missing: File Location Validation**
-No guidance on ensuring files are created in correct locations.
+4.  **Missing: Error Recovery Procedures**:
+    -   **Needed**: "If you realize you're working outside worktree: [recovery steps]"
+    -   **Passive Restraint Integration**: Rules can include explicit recovery instructions for common violations.
 
-**Needed**: "Check file location: `pwd | grep -q '.worktrees/' || echo 'ERROR: Creating file outside worktree'"`
+5.  **Missing: Active Session Branch Validation**:
+    -   **Needed**: "Verify current branch: `git rev-parse --abbrev-ref HEAD | grep -q 'session/$SESSION_SLUG' || echo 'ERROR: Not in session branch'"`
+    -   **Passive Restraint Integration**: A rule can enforce this check before any Git commit/push.
 
-### 3. **Missing: Protocol Compliance Checks**
-No self-validation mechanisms mentioned.
+## Strategies for Helping the Agent Adhere to the Session Branch (Re-framed by Passive Restraints)
 
-**Needed**: Regular protocol compliance validation steps.
+The previously identified strategies are all mechanisms that can be *implemented through* or *reinforced by* passive restraints.
 
-### 4. **Missing: Error Recovery Procedures**
-No guidance on what to do if you realize you're not following protocol.
+1.  **Pre-command Hooks/Aliases**: Can be defined and enforced by passive restraint rules.
+2.  **Environment Variable Enforcement**: Passive restraints can ensure correct environment variable setup and usage.
+3.  **Enhanced Shell Prompt**: Passive restraints can guide the agent to configure a prompt that provides critical context.
+4.  **Automated Context Switching**: Passive restraints can define the conditions and actions for automatic context switching.
+5.  **Pre-commit/Pre-push Hooks**: Passive restraints can specify and even generate these Git hooks.
+6.  **Clearer Documentation and Training**: Passive restraints serve as a living, executable form of this documentation.
 
-**Needed**: "If you realize you're working outside worktree: [recovery steps]"
+## Conclusion: Passive Restraints as the Foundational Solution
 
-### 5. **Missing: Active Session Branch Validation**
-No explicit check to ensure the agent is operating within the correct session branch. While "Namespace Isolation" is mentioned, the documentation lacks explicit instructions or mechanisms to *enforce* that an agent remains on its session branch.
+The core Agent Sessions Protocol is sound, but the failure was in **execution and decision-making** due to a lack of **continuous, automatic enforcement**. The solution is not merely more documentation or reactive validation, but the proactive implementation of **passive restraint mechanisms**.
 
-**Needed**: "Verify current branch: `git rev-parse --abbrev-ref HEAD | grep -q 'session/$SESSION_SLUG' || echo 'ERROR: Not in session branch'"`
+By centering our strategy on passive restraints, we can:
 
-## Strategies for Helping the Agent Adhere to the Session Branch
+1.  **Embed Protocol Rules**: Make session workflow requirements an inherent part of the agent's operational environment.
+2.  **Prevent Violations**: Leverage poka-yoke principles to make incorrect actions impossible or immediately obvious.
+3.  **Ensure Consistent Adherence**: Provide always-on guidance that transcends individual session prompts.
+4.  **Reduce Cognitive Load**: Simplify decision-making by providing clear, context-specific rules.
+5.  **Enable Self-Correction**: Equip agents with the means to validate their own actions against established protocols.
 
-To address the newly identified guardrail issue and reinforce adherence to the session branch, the following strategies should be considered:
-
-1.  **Pre-command Hooks/Aliases**: Implement shell functions or aliases that wrap common git commands (`git commit`, `git add`, `git push`) and automatically perform a `validate_in_session_branch` check before execution. If the check fails, the command should be aborted with a clear error message.
-2.  **Environment Variable Enforcement**: Leverage session-specific environment variables (e.g., `SESSION_BRANCH`) to dynamically configure git to only operate on the designated branch, or to warn/error if an attempt is made to switch branches.
-3.  **Enhanced Shell Prompt**: Modify the shell prompt (`PS1`) to prominently display the current branch and a clear indicator if it does not match the active session branch.
-4.  **Automated Context Switching**: Explore mechanisms that automatically switch the agent's working directory and git context to the correct worktree/branch upon session activation, and revert upon deactivation.
-5.  **Pre-commit/Pre-push Hooks**: Implement client-side git hooks that prevent commits or pushes from occurring if the agent is not on the correct session branch.
-6.  **Clearer Documentation and Training**: While the protocol is clear, emphasize the "ONLY WORK IN THE SESSION BRANCH" rule with dedicated sections, examples, and warnings in `SESSIONS-README.md` and `SESSIONS-REFERENCE.md`.
-
-## Conclusion
-
-**The protocol documentation is actually excellent and comprehensive.** The failure was in **execution and decision-making**, not documentation clarity. The solution is to:
-
-1.  **Add validation mechanisms** to prevent protocol violations.
-2.  **Enhance documentation** with explicit validation steps.
-3.  **Create safeguards** that make protocol violations impossible or easily detectable.
-4.  **Implement recovery procedures** for when violations are detected.
-5.  **Specifically enforce adherence to the session branch** through technical and procedural safeguards.
-
-The core protocol is sound - we just need better **enforcement and validation** mechanisms, with a particular focus on ensuring the agent operates exclusively within its assigned session branch.
+The next phase of this session must prioritize the creation and integration of passive restraint files (e.g., `.roo/rules`) to establish a robust, error-proof foundation for agent operations.
