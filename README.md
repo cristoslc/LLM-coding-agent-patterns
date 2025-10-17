@@ -79,7 +79,7 @@ The `_templates/` directory contains Jinja2 templates for generating consistent 
 
 - **`rfc.md.j2`**: Request for Comments (RFC) document template
 - **`kb-merge-SESSION.md.j2`**: Knowledge base merge session template
-- **`session-env.template.j2`**: Session environment configuration template
+- **`session-env.j2`**: Session environment configuration template
 
 ### Using Templates
 

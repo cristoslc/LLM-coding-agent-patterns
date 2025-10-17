@@ -261,7 +261,7 @@ The `_templates/` directory provides Jinja2 templates for creating consistent se
 - **Usage**: Automatically created by complete-session script when learnings exist
 - **Purpose**: Guides systematic merging of session learnings into canonical knowledge base
 
-**`session-env.template.j2`** - Session environment template:
+**`session-env.j2`** - Session environment template:
 - **Variables**: `SESSION_SLUG`, `USER_NAME`, `USER_EMAIL`
 - **Usage**: Automatically created by claim-session script for session activation
 - **Purpose**: Establishes agent identity and session-specific environment variables
