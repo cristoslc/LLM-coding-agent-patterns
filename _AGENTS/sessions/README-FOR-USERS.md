@@ -352,7 +352,7 @@ The Git workflow follows three distinct phases: **Session Initialization**, **On
 1. Generate patch file from session work in `.codebase/`
 2. Check for KB learnings and create merge session if needed
 3. Remove session clone directory (`.codebase/`)
-4. Merge session branch to main via squash merge
+4. Merge session branch to base branch via squash merge
 5. Remove session entry from `_AGENTS/sessions/sessions.lock`
 6. Move session from `active/` to `completed/`
 7. Delete session branch and clean up
@@ -396,6 +396,7 @@ The Git workflow follows three distinct phases: **Session Initialization**, **On
 - Clean history maintained with single commit per session
 - Session contributions clearly attributed via commit messages
 - Conflict resolution documented in session worklog when needed
+- Squash merge ensures atomic session completion and clean git history
 
 ## Conflict Resolution
 

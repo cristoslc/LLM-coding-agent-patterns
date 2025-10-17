@@ -71,7 +71,7 @@ Completes a session and merges to main.
 1. Generates patch file from session work in `.codebase/`
 2. Checks for KB learnings and creates KB merge session in `drafting/` if found
 3. Removes session clone directory (`.codebase/`)
-4. Merges session branch to main via squash merge
+4. Merges session branch to base branch via squash merge
 5. Removes session from `.agents/sessions.lock`
 6. Moves session from `active/` to `completed/`
 7. Deletes session branch
@@ -406,11 +406,11 @@ cd ../../
 rm -rf _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
 echo "✅ Session clone removed"
 
-# 4. Merge to main
-git pull origin main
+# 4. Merge to base branch via squash merge
+git pull origin main  # or origin dev
 git merge --squash session/2025-10-14-auth-system
 git commit -m "[2025-10-14-auth-system] Session complete: 2025-10-14-auth-system"
-git push origin main
+git push origin main  # or origin dev
 
 # 5. Unlock SESSION.md for final updates
 chmod 644 _AGENTS/sessions/active/2025-10-14-auth-system/SESSION.md
@@ -432,6 +432,8 @@ git push origin main
 # 8. Cleanup
 git branch -d session/2025-10-14-auth-system
 echo "✅ Session branch deleted"
+
+**Note:** The merge uses squash merge (`git merge --squash`) to ensure atomic session completion and clean git history. This creates a single commit on the base branch (main/dev) that represents all session work.
 ```
 
 ---

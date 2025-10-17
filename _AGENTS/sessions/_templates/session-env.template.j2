@@ -12,7 +12,7 @@
    Variables:
      - SESSION_SLUG: The unique identifier for the session
      - USER_NAME: The name of the user running the session
-     - USER_EMAIL: The email of the user running the session
+     - BASE_BRANCH: The base branch (main/dev) that session will merge to
    ======================================================= #}
 
 # Session Environment Template
@@ -20,15 +20,17 @@
 # Then update the values and source it: source .session-env
 
 export GIT_AUTHOR_NAME="Session-{{ SESSION_SLUG }} (via {{ USER_NAME }})"
-export GIT_AUTHOR_EMAIL="{{ USER_EMAIL }}+{{ SESSION_SLUG }}@agents.local"
+export GIT_AUTHOR_EMAIL="{{ USER_NAME }}+{{ SESSION_SLUG }}@agents.local"
 export GIT_COMMITTER_NAME="Session-{{ SESSION_SLUG }} (via {{ USER_NAME }})"
-export GIT_COMMITTER_EMAIL="{{ USER_EMAIL }}+{{ SESSION_SLUG }}@agents.local"
+export GIT_COMMITTER_EMAIL="{{ USER_NAME }}+{{ SESSION_SLUG }}@agents.local"
 
 export SESSION_SLUG="{{ SESSION_SLUG }}"
 export SESSION_BRANCH="session/{{ SESSION_SLUG }}"
+export BASE_BRANCH="{{ BASE_BRANCH }}"
 
 # Optional: Update shell prompt to show active session
 export PS1="({{ SESSION_SLUG }}) \w $ "
 
 echo "✅ Session active: $SESSION_SLUG"
+echo "📍 Base branch: $BASE_BRANCH"
 
