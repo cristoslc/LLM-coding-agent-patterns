@@ -12,15 +12,15 @@ The current implementation of the session management scripts has the following c
 - Assumes `.agents/sessions.lock` file exists and is writable without validation
 - Doesn't handle cases where SESSION.md file doesn't exist in the planned session
 - Doesn't validate that the session branch doesn't already exist before creation
-- Doesn't check if the worktree directory already exists before attempting to create it
-- Lacks proper error handling for git operations (worktree creation, branch operations)
+- Doesn't check if the session clone directory already exists before attempting to create it
+- Lacks proper error handling for git operations (shallow clone creation, branch operations)
 - No validation of session name format or existence
 
 **Complete-Session Script Issues:**
 - Assumes `.agents/sessions.lock` file exists and is writable without validation
 - Doesn't handle cases where SESSION.md file doesn't exist in the active session
 - Doesn't validate that the session branch exists before attempting operations
-- Doesn't handle cases where the worktree directory doesn't exist
+- Doesn't handle cases where the session clone directory doesn't exist
 - Doesn't handle cases where KB merge session template file doesn't exist
 - Lacks proper cleanup handling if operations fail partway through
 - No rollback mechanisms for failed operations
@@ -37,7 +37,7 @@ The current implementation of the session management scripts has the following c
 - Git remote not accessible during operations
 - Session directory structure is corrupted or incomplete
 - Concurrent access to session files (race conditions)
-- Disk space issues during worktree creation
+- Disk space issues during session clone creation
 - Network connectivity issues during git operations
 
 ## Acceptance Criteria
@@ -93,15 +93,15 @@ The current implementation of the session management scripts has the following c
 ## Dependencies
 - Access to test repositories for validation
 - Understanding of current session protocol requirements
-- Knowledge of git worktree and branch management
+- Knowledge of git shallow clone and branch management
 - Familiarity with shell scripting best practices
 
-## Original Implementation Plan
-1. Review both scripts to identify all potential edge cases
+## Updated Implementation Plan
+1. Review both scripts to identify all potential edge cases in shallow clone architecture
 2. Add error handling for all file operations
-3. Add validation for all git operations
+3. Add validation for all git operations (clone, branch, merge)
 4. Ensure consistency in error handling and user feedback
-5. Add documentation for both scripts
-6. Add tests for both scripts
+5. Add documentation for both scripts with shallow clone examples
+6. Add tests for both scripts covering shallow clone scenarios
 7. Verify that both scripts work correctly in all edge cases
 8. Create KB merge session if needed
