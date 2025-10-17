@@ -7,14 +7,32 @@
 ```bash
 # Claim and activate session
 ./_bin/claim-session 2025-10-14-feature-x
+# Manual claim process:
+# 1. git pull --rebase origin main
+# 2. echo "session-id:timestamp" >> .agents/sessions.lock
+# 3. git add .agents/sessions.lock && git commit -m "[session-id] Claim session"
+# 4. git push origin main
+# 5. mv _AGENTS/sessions/planned/session-id _AGENTS/sessions/active/
+# 6. chmod 444 _AGENTS/sessions/active/session-id/SESSION.md
+# 7. Create .session-env file with agent identity variables
+# 8. Create shallow clone in active/{session-slug}/.codebase/ from main repository
+# 9. Create session-specific branch within clone and configure remote as upstream
 
-# Activate session environment (in session codebase)
+# Activate session environment
 cd _AGENTS/sessions/active/2025-10-14-feature-x/.codebase
 source ../.session-env
 
-# Complete session (unlocks SESSION.md for final updates)
+# Complete session
 cd ../../../../..
 ./_bin/complete-session 2025-10-14-feature-x
+# Manual completion process:
+# 1. Generate patch file from session work in .codebase/
+# 2. Check for KB learnings and create merge session if needed
+# 3. Remove session clone directory (.codebase/)
+# 4. Merge session branch to main via squash merge
+# 5. Remove session entry from .agents/sessions.lock
+# 6. Move session from active/ to completed/
+# 7. Delete session branch and clean up
 ```
 
 ## Essential Rules

@@ -42,8 +42,9 @@ Claims and activates a session atomically.
 3. Claims session atomically via git push
 4. Moves session from `planned/` to `active/` and commits
 5. Creates `.session-env` file with session identity and commits
-6. Creates worktree with session branch at `.worktrees/{session-slug}`
-7. Provides activation instructions for the worktree
+6. Creates shallow clone in `active/{session-slug}/.codebase/` from main repository
+7. Creates session-specific branch within clone and configures remote
+8. Provides activation instructions for the session clone
 
 **Environment Variables Set:**
 - `GIT_AUTHOR_NAME` - Agent-specific git author
@@ -67,9 +68,9 @@ Completes a session and merges to main.
 ```
 
 **What it does:**
-1. Generates patch file in session directory (`{session-slug}.patch`)
+1. Generates patch file from session work in `.codebase/`
 2. Checks for KB learnings and creates KB merge session in `drafting/` if found
-3. Removes worktree at `.worktrees/{session-slug}`
+3. Removes session clone directory (`.codebase/`)
 4. Merges session branch to main via squash merge
 5. Removes session from `.agents/sessions.lock`
 6. Moves session from `active/` to `completed/`
@@ -260,9 +261,9 @@ sed -e "s/{{AGENT_ID}}/cursor-1/g" \
 ./_bin/claim-session 2025-10-14-auth-system
 # Note: SESSION.md becomes read-only to preserve original plan
 
-# 2. Activate session environment (in worktree)
-cd .worktrees/2025-10-14-auth-system
-source ../../sessions/active/2025-10-14-auth-system/.session-env
+# 2. Activate session environment (in session clone)
+cd _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+source ../.session-env
 
 # 3. Verify activation
 echo $GIT_AUTHOR_NAME  # Should show: Cursor-Local-1 (via username)
@@ -272,18 +273,18 @@ echo $SESSION_SLUG    # Should show: 2025-10-14-auth-system
 #### Working on a Session
 
 ```bash
-# Working from worktree (.worktrees/2025-10-14-auth-system)
+# Working from session clone (_AGENTS/sessions/active/2025-10-14-auth-system/.codebase)
 
 # Make code changes
 git add src/auth.js
 git commit -m "[2025-10-14-auth-system] feat: add JWT validation"
 
 # Update session documentation (in main repo)
-echo "## [2025-10-14 15:30] Implemented JWT validation" >> ../../sessions/active/2025-10-14-auth-system/worklog.md
-cd ../../sessions/active/2025-10-14-auth-system
+echo "## [2025-10-14 15:30] Implemented JWT validation" >> ../../worklog.md
+cd ../../
 git add worklog.md
 git commit -m "[2025-10-14-auth-system] docs: update worklog"
-cd ../../.worktrees/2025-10-14-auth-system
+cd .codebase/
 
 # Capture learnings
 mkdir -p _AGENTS/knowledge/sessions/2025-10-14-auth-system
@@ -311,13 +312,13 @@ git commit -m "[2025-10-14-auth-system] docs: capture learnings"
 
 ```bash
 # 1. Complete session (from repo root)
-cd ../..  # Back to repo root
+cd ../../../../..  # Back to repo root
 ./_bin/complete-session 2025-10-14-auth-system
 
 # The script automatically:
-# - Generates patch file: sessions/completed/2025-10-14-auth-system/2025-10-14-auth-system.patch
+# - Generates patch file: _AGENTS/sessions/completed/2025-10-14-auth-system/2025-10-14-auth-system.patch
 # - Creates KB merge session in drafting/ if learnings exist
-# - Removes worktree at .worktrees/2025-10-14-auth-system
+# - Removes session clone at _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
 # - Merges session branch to main
 # - Removes session from .agents/sessions.lock
 # - Moves session to completed/
@@ -337,7 +338,7 @@ unset SESSION_SLUG SESSION_ID
 git pull origin main
 
 # 2. Check available sessions
-ls sessions/planned/
+ls _AGENTS/sessions/planned/
 
 # 3. Check current claims
 cat .agents/sessions.lock
@@ -352,17 +353,17 @@ if git push origin main; then
   echo "✅ Session claimed"
   
   # 6. Move to active and commit
-  mv sessions/planned/2025-10-14-auth-system sessions/active/
-  git add sessions/
+  mv _AGENTS/sessions/planned/2025-10-14-auth-system _AGENTS/sessions/active/
+  git add _AGENTS/sessions/
   git commit -m "[2025-10-14-auth-system] Move to active"
   
   # 7. Set SESSION.md to read-only
-  chmod 444 sessions/active/2025-10-14-auth-system/SESSION.md
-  git add sessions/active/2025-10-14-auth-system/SESSION.md
+  chmod 444 _AGENTS/sessions/active/2025-10-14-auth-system/SESSION.md
+  git add _AGENTS/sessions/active/2025-10-14-auth-system/SESSION.md
   git commit -m "[2025-10-14-auth-system] Set SESSION.md read-only"
 
   # 8. Create .session-env and commit
-  cat > sessions/active/2025-10-14-auth-system/.session-env << 'EOF'
+  cat > _AGENTS/sessions/active/2025-10-14-auth-system/.session-env << 'EOF'
 export GIT_AUTHOR_NAME="Cursor-Local-1 (via cristos)"
 export GIT_AUTHOR_EMAIL="cristos+2025-10-14-auth-system@agents.local"
 export GIT_COMMITTER_NAME="Session-2025-10-14-auth-system (via cristos)"
@@ -370,12 +371,16 @@ export GIT_COMMITTER_EMAIL="cristos+2025-10-14-auth-system@agents.local"
 export SESSION_ID="2025-10-14-auth-system"
 export SESSION_SLUG="2025-10-14-auth-system"
 EOF
-  git add sessions/active/2025-10-14-auth-system/.session-env
+  git add _AGENTS/sessions/active/2025-10-14-auth-system/.session-env
   git commit -m "[2025-10-14-auth-system] Add session environment"
-  # 9. Create worktree with session branch
-  git worktree add -b session/2025-10-14-auth-system .worktrees/2025-10-14-auth-system HEAD
-  echo "✅ Worktree created at .worktrees/2025-10-14-auth-system"
-  echo "Activate: cd .worktrees/2025-10-14-auth-system && source ../../sessions/active/2025-10-14-auth-system/.session-env"
+  # 9. Create shallow clone in active/{session-slug}/.codebase/ from main repository
+  git clone --depth 1 --branch main . _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+  cd _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+  git checkout -b session/2025-10-14-auth-system
+  git remote rename origin upstream
+  cd ../../../../
+  echo "✅ Session clone created at _AGENTS/sessions/active/2025-10-14-auth-system/.codebase"
+  echo "Activate: cd _AGENTS/sessions/active/2025-10-14-auth-system/.codebase && source ../.session-env"
 else
   echo "❌ Claim failed - another agent got it first"
   git reset --hard HEAD~1
@@ -385,10 +390,10 @@ fi
 #### Manual Completion Process
 
 ```bash
-# 1. Generate patch file (from worktree)
-cd .worktrees/2025-10-14-auth-system
-git format-patch main --stdout > ../../sessions/active/2025-10-14-auth-system/2025-10-14-auth-system.patch
-echo "✅ Patch file created: sessions/active/2025-10-14-auth-system/2025-10-14-auth-system.patch"
+# 1. Generate patch file (from session clone)
+cd _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+git format-patch main --stdout > ../../2025-10-14-auth-system.patch
+echo "✅ Patch file created: _AGENTS/sessions/active/2025-10-14-auth-system/2025-10-14-auth-system.patch"
 
 # 2. Check for KB learnings and create KB merge session if exists
 if [ -f "_AGENTS/knowledge/sessions/2025-10-14-auth-system/learnings.md" ]; then
@@ -396,10 +401,10 @@ if [ -f "_AGENTS/knowledge/sessions/2025-10-14-auth-system/learnings.md" ]; then
   # [KB merge session creation logic]
 fi
 
-# 3. Return to main repo and remove worktree
-cd ../..
-git worktree remove .worktrees/2025-10-14-auth-system
-echo "✅ Worktree removed"
+# 3. Return to main repo and remove session clone
+cd ../../
+rm -rf _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+echo "✅ Session clone removed"
 
 # 4. Merge to main
 git pull origin main
@@ -408,19 +413,19 @@ git commit -m "[2025-10-14-auth-system] Session complete: 2025-10-14-auth-system
 git push origin main
 
 # 5. Unlock SESSION.md for final updates
-chmod 644 sessions/active/2025-10-14-auth-system/SESSION.md
-git add sessions/active/2025-10-14-auth-system/SESSION.md
+chmod 644 _AGENTS/sessions/active/2025-10-14-auth-system/SESSION.md
+git add _AGENTS/sessions/active/2025-10-14-auth-system/SESSION.md
 git commit -m "[2025-10-14-auth-system] Unlock SESSION.md for final updates"
 
 # 6. Remove from lock and move to completed
 sed -i '/^2025-10-14-auth-system:/d' .agents/sessions.lock
 git add .agents/sessions.lock
-mv sessions/active/2025-10-14-auth-system sessions/completed/
-git add sessions/
+mv _AGENTS/sessions/active/2025-10-14-auth-system _AGENTS/sessions/completed/
+git add _AGENTS/sessions/
 git commit -m "[2025-10-14-auth-system] Archive session"
 # 7. Set SESSION.md back to read-only in completed
-chmod 444 sessions/completed/2025-10-14-auth-system/SESSION.md
-git add sessions/completed/2025-10-14-auth-system/SESSION.md
+chmod 444 _AGENTS/sessions/completed/2025-10-14-auth-system/SESSION.md
+git add _AGENTS/sessions/completed/2025-10-14-auth-system/SESSION.md
 git commit -m "[2025-10-14-auth-system] Set SESSION.md read-only in completed"
 git push origin main
 
@@ -431,9 +436,9 @@ echo "✅ Session branch deleted"
 
 ---
 
-## Git Worktrees Setup
+## Session Clone Setup
 
-Worktrees enable running multiple sessions concurrently by providing isolated working directories. Each session automatically gets its own worktree.
+Session clones enable running multiple sessions concurrently by providing isolated working directories. Each session automatically gets its own shallow clone.
 
 ### How It Works
 
@@ -441,31 +446,36 @@ Worktrees enable running multiple sessions concurrently by providing isolated wo
 # Main repo structure
 .
 ├── .git/                    # Shared git database
-├── .worktrees/              # Isolated session workspaces
-│   ├── 2025-10-14-auth-system/      # Full repo copy for this session
-│   └── 2025-10-14-api-work/         # Full repo copy for this session
 ├── sessions/
 │   ├── active/
-│   │   ├── 2025-10-14-auth-system/  # Session metadata
-│   │   └── 2025-10-14-api-work/     # Session metadata
+│   │   ├── 2025-10-14-auth-system/
+│   │   │   ├── .codebase/           # Shallow clone for this session
+│   │   │   ├── .session-env
+│   │   │   └── SESSION.md
+│   │   └── 2025-10-14-api-work/
+│   │       ├── .codebase/           # Shallow clone for this session
+│   │       ├── .session-env
+│   │       └── SESSION.md
 │   └── ...
 └── ...
 ```
 
-### Creating Session Worktrees
+### Creating Session Clones
 
 ```bash
-# When claiming a session, worktree is created automatically
+# When claiming a session, clone is created automatically
 ./_bin/claim-session 2025-10-14-auth-system
 
 # Manual creation if needed
-git worktree add -b session/2025-10-14-auth-system \
-  .worktrees/2025-10-14-auth-system \
-  HEAD
+git clone --depth 1 --branch main . _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+cd _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+git checkout -b session/2025-10-14-auth-system
+git remote rename origin upstream
+cd ../../../../
 
-# Activate in worktree
-cd .worktrees/2025-10-14-auth-system
-source ../../sessions/active/2025-10-14-auth-system/.session-env
+# Activate in session clone
+cd _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+source ../.session-env
 
 # Work on session...
 ```
@@ -474,45 +484,41 @@ source ../../sessions/active/2025-10-14-auth-system/.session-env
 
 ```bash
 # Session 1 (Auth System)
-cd .worktrees/2025-10-14-auth-system
-source ../../sessions/active/2025-10-14-auth-system/.session-env
+cd _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
+source ../.session-env
 # Work on auth...
 
 # Session 2 (API Refactor) - runs concurrently
-cd .worktrees/2025-10-14-api-refactor
-source ../../sessions/active/2025-10-14-api-refactor/.session-env
+cd _AGENTS/sessions/active/2025-10-14-api-refactor/.codebase
+source ../.session-env
 # Work on API...
 
 # Both sessions work simultaneously without interference
 ```
 
-### Cleanup Worktrees
+### Cleanup Session Clones
 
 ```bash
 # Automatic cleanup during session completion
 ./_bin/complete-session 2025-10-14-auth-system
 
 # Manual removal if needed
-git worktree remove .worktrees/2025-10-14-auth-system
+rm -rf _AGENTS/sessions/active/2025-10-14-auth-system/.codebase
 
-# List all worktrees
-git worktree list
-
-# Prune deleted worktrees
-git worktree prune
+# List session clones
+ls _AGENTS/sessions/active/*/ .codebase/
 ```
 
 **Benefits:**
-- Shared `.git` directory (efficient disk usage)
+- Shallow clones (efficient disk usage)
 - Isolated working directories (no file conflicts)
 - Can run multiple sessions concurrently
 - Main repo stays on base branch (dev/main)
 - Session metadata separate from workspace
 
 **Limitations:**
-- Can't checkout same branch in multiple worktrees
 - Each session must have unique branch name
-- `.worktrees/` directory should be in `.gitignore`
+- `.codebase/` directories are ignored via local .gitignore
 
 ---
 
