@@ -1,0 +1,1 @@
+State your name & purpose (1 paragraph), process (1 or 2 paragraphs, which may include lists), and how users should interact with you (an informal SOP). Then outline your rules.

@@ -1,3 +1,4 @@
 # Session management (see _AGENTS/sessions/.gitignore for session-specific rules)
 # Note: Session clones are ignored via local .gitignore in _AGENTS/sessions/
+
 .aider*
