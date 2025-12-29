@@ -2,3 +2,4 @@
 # Note: Session clones are ignored via local .gitignore in _AGENTS/sessions/
 
 .aider*
+.DS_Store
